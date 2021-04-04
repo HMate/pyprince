@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "pyprince"
+version = "0.1.0"
+description = ""
+authors = ["HMate <mhidvegi@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+libcst = "^0.3.18"
+typer = "^0.3.2"
+fs = "^2.4.13"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
