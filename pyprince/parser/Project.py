@@ -6,8 +6,8 @@ import libcst
 
 @dataclass
 class ImportLocation:
-    # path on the imported name
-    path: Path
+    # the fully qualified import name of the parent package
+    parent_name: str
     # name of the module/function/class to import
     name: str
 

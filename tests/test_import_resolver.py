@@ -7,6 +7,7 @@ from tests import testutils
 
 class TestImportResolver(unittest.TestCase):
 
+    # TODO: All these tests are obsolete, rewrite to new format
     def test_imported_names(self):
         test_main = testutils.get_test_scenarios_dir() / "exmp01_import_modules/main.py"
         project: Project = parse_file(test_main)
@@ -16,6 +17,7 @@ class TestImportResolver(unittest.TestCase):
         self.assertIn("os.path", project.imports)
         self.assertIn("sys", project.imports)
         self.assertIn("abc", project.imports)
+        self.assertIn("thread_time", project.imports)
 
         self.assertIn("utils", project.imports)
         self.assertIn("other", project.imports)
@@ -30,7 +32,7 @@ class TestImportResolver(unittest.TestCase):
         
         def test_module_path(alias, path, name):
             imp = project.imports[alias]
-            self.assertEqual(path, imp.path)
+            self.assertEqual(path, imp.parent_name)
             self.assertEqual(name, imp.name)
 
         test_module_path("os", "", "os")
@@ -38,14 +40,20 @@ class TestImportResolver(unittest.TestCase):
         test_module_path("os.path", "", "os.path")
         test_module_path("sys", "", "sys")
         test_module_path("abc", "", "abc")
+        test_module_path("thread_time", "", "time.thread_time")
 
-        test_module_path("utils", ".", "utils")
+        test_module_path("utils", "", "utils")
         test_module_path("other", "", "other")
         
-        test_module_path("print_hello", "utils", "print_hello")
-        test_module_path("diff", "utils", "print_different_hello")
-        test_module_path("SomeGood", "other", "SomeGood")
-        test_module_path("Diff", "other", "SomeDifferent")
+        test_module_path("print_hello", "", "utils.print_hello")
+        test_module_path("diff", "", "utils.print_different_hello")
+        test_module_path("SomeGood", "", "other.SomeGood")
+        test_module_path("Diff", "", "other.SomeDifferent")
+
+        # test_module_path("Test", "sub", ".mod.Test")
+
+    # TODO: test relative imports in subpackage
+    # TODO: test start imports
 
 
 if __name__ == "__main__":
