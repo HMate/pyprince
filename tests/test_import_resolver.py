@@ -1,35 +1,39 @@
 from pyprince.parser.Project import Project
 import unittest
 
-from pyprince.parser import parse_file
+from pyprince.parser import parse_project
 from tests import testutils
 
 
 class TestImportResolver(unittest.TestCase):
 
-    # TODO: All these tests are obsolete, rewrite to new format
+    # TODO: Finish test
+    def test_code_generate(self):
+        test_main = testutils.get_test_scenarios_dir() / "exmp00_no_imports/main.py"
+        project: Project = parse_project(test_main)
+        expected = """print("Hello pyparser")"""
+        actual = project.generate_code()
+        self.assertEqual(expected, actual)
+
     def test_imported_names(self):
         test_main = testutils.get_test_scenarios_dir() / "exmp01_import_modules/main.py"
-        project: Project = parse_file(test_main)
+        project: Project = parse_project(test_main)
         self.assertIsNotNone(project)
-        self.assertIn("os", project.imports)
-        self.assertIn("pl", project.imports)
-        self.assertIn("os.path", project.imports)
-        self.assertIn("sys", project.imports)
-        self.assertIn("abc", project.imports)
-        self.assertIn("thread_time", project.imports)
+        self.assertIsNotNone(project.get_syntax_tree("os"))
+        self.assertIsNotNone(project.get_syntax_tree("pathlib"))
+        self.assertIsNotNone(project.get_syntax_tree("ntpath"))  # os.path gets "renamed"
+        self.assertIsNone(project.get_syntax_tree("sys"))  # builtin
+        self.assertIsNotNone(project.get_syntax_tree("abc"))
+        self.assertIsNone(project.get_syntax_tree("time"))  # builtin
 
-        self.assertIn("utils", project.imports)
-        self.assertIn("other", project.imports)
-        self.assertIn("print_hello", project.imports)
-        self.assertIn("diff", project.imports)
-        self.assertIn("SomeGood", project.imports)
-        self.assertIn("Diff", project.imports)
+        self.assertIsNotNone(project.get_syntax_tree("utils"))
+        self.assertIsNotNone(project.get_syntax_tree("other"))
 
+    # TODO: this test is obsolete, rewrite for new parse
     def test_imported_paths(self):
         test_main = testutils.get_test_scenarios_dir() / "exmp01_import_modules/main.py"
-        project: Project = parse_file(test_main)
-        
+        project: Project = parse_project(test_main)
+
         def test_module_path(alias, path, name):
             imp = project.imports[alias]
             self.assertEqual(path, imp.parent_name)
@@ -44,7 +48,7 @@ class TestImportResolver(unittest.TestCase):
 
         test_module_path("utils", "", "utils")
         test_module_path("other", "", "other")
-        
+
         test_module_path("print_hello", "", "utils.print_hello")
         test_module_path("diff", "", "utils.print_different_hello")
         test_module_path("SomeGood", "", "other.SomeGood")

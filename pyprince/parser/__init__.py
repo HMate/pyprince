@@ -1,5 +1,7 @@
+import inspect
 import sys
-import pathlib
+from pathlib import Path
+from types import ModuleType
 from typing import Optional, Sequence
 import importlib, importlib.util
 
@@ -14,7 +16,6 @@ class CSTImportResolver(libcst.CSTTransformer):
     def __init__(self, project: Project) -> None:
         super().__init__()
         self.project = project
-        self.current_import_name: str = ""
 
     def visit_Import(self, node: libcst.Import):
         """The whole of: import mod"""
@@ -24,22 +25,6 @@ class CSTImportResolver(libcst.CSTTransformer):
             if alias is None:
                 alias = name.evaluated_name
             self.project.add_import(alias, ImportLocation("", name.evaluated_name))
-        self.current_import_name = ""
-
-    def leave_Import(self, node: libcst.Import, updated_node: libcst.CSTNode):
-        self.current_import_name = ""
-        return node
-
-    # def visit_ImportAlias(self, node: libcst.ImportAlias):
-    #     """the alias part in: 
-    #     import alias
-    #     from util import alias
-    #     """
-    #     alias = node.evaluated_alias
-    #     if alias is None:
-    #         alias = node.evaluated_name
-    #     print(f"alias: {alias}")
-    #     self.project.add_import(alias, ImportLocation(self.current_import_name, node.evaluated_name))
 
     def visit_ImportFrom(self, node: libcst.ImportFrom):
         """The whole of: from pack import mod"""
@@ -48,64 +33,96 @@ class CSTImportResolver(libcst.CSTTransformer):
         # ie. from . import mod
         if node.module is not None:
             package = f"{node.module.value}."
+        print(f"import from: {package}")
         if isinstance(node.names, Sequence):
             for name in node.names:
                 alias = name.evaluated_alias
                 if alias is None:
                     alias = name.evaluated_name
                 self.project.add_import(alias, ImportLocation("", f"{package}{name.evaluated_name}"))
-        print(f"import from: {self.current_import_name}")
-
-    def leave_ImportFrom(self, node: libcst.ImportFrom, updated_node: libcst.CSTNode):
-        self.current_import_name = None
-        return node
 
 
-def parse_file(entry_file: pathlib.Path) -> Project:
-    content = entry_file.read_text()
-    result = Project()
-    resolver = CSTImportResolver(result)
-    cst: libcst.Module = libcst.parse_module(content)
-    cst.visit(resolver)
+def parse_project(entry_file: Path) -> Project:
 
-    # TODO: Figure out how to find module path for every scenario
-    # TODO: sys is builtin - what now?
-    sys.path = [str(entry_file.parent)] + sys.path
-    try:
-        for alias, location in result.imports.items():
-            # TODO: Handle: import ..module
-            if location.name.startswith(".") and location.parent_name == "":
-                location.name = location.name[1:]
-            # TODO: We have to manually DFS import modules, and check manually the paths? 
-            # Because find_spec calls __import__, which runs real code, and also it seems to need parent packages to be loaded
-            spec = importlib.util.find_spec(location.name, location.parent_name)
-            if spec:
-                print(f"spec {location.name}:{location.parent_name}: {spec.name} - {spec.origin}")
-            else:
-                print(f"spec {location.name}:{location.parent_name}: None:(")
-    finally:
-        sys.path = sys.path[1:]
+    # Want to: recursively inject ast from imported module in the place of module/class/function references
+    # - collect all files we need ast for
+    # - parse ast of files
+    # - map imports to asts
+    # - map module/class/function reference to ast node
+    modules = parse_modules_recursively(entry_file)
 
-    return result
+    proj = Project(modules)
 
-def parse_file2(entry_file: pathlib.Path):
-    # TODO: We will need a mix between this and parse_file, 
-    # we need to find all modules, 
-    # and for now we can piggyback onimportlib.import_module, 
-    # but int the future this will be unsafe because of unsfafe code in modules. 
-    # After module paths and objects are known, we parse their ASTs, and then we 
-    # can start to patch in objects from imported modules
-    content = entry_file.read_text()
+    for mod in proj.iter_modules():
+        if (not hasattr(mod, "__path__")) and mod.__spec__.origin == "built-in":
+            continue  # Module is builtin, we dont have the source
+        module_path = Path(mod.__file__)
+        content = module_path.read_text(encoding="UTF8")
+        cst: libcst.Module = libcst.parse_module(content)
+        proj.add_syntax_tree(mod, cst)
+
+    resolver = CSTImportResolver(proj)
+    # cst.visit(resolver)
+
+    return proj
+
+
+def parse_modules_recursively(entry_file: Path) -> Optional[ModuleType]:
+    """
+    Recursively gathers all imported and defined modules and contained declarations.
+    Currently this executes module level statements. In the future that should be fixed, as it is a security liability.
+    """
     module_name = entry_file.stem
+    mod = _import_module(entry_file, module_name)
+
+    if mod is not None:
+        # Modules that are implicitly loaded from "from statements" are not stored by importlib.import_module
+        # So we load them ourselves
+        _load_missing_modules(entry_file, mod)
+    return mod
 
 
+def _import_module(entry_file: Path, module_name: str):
     sys.path = [str(entry_file.parent)] + sys.path
     try:
         mod = importlib.import_module(module_name)
         return mod
     except Exception as e:
-        print(f"Got: {e}")
+        print(f"Error while parse_modules for {entry_file}: {e}")
     finally:
         sys.path = sys.path[1:]
     return None
 
+
+def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None):
+    if visited == None:
+        visited = []
+    if mod in visited:
+        return
+    visited.append(mod)
+    builtins: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isbuiltin)
+    functions: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isfunction)
+    classes: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isclass)
+
+    names_seen = []
+
+    def _import_and_load(sub: str):
+        if sub in names_seen:
+            return
+        names_seen.append(sub)
+        sub_mod = _import_module(entry_file, sub)
+        if sub_mod is not None:
+            if not hasattr(mod, sub):
+                setattr(mod, sub, sub_mod)
+
+    for name, func in builtins:
+        _import_and_load(func.__module__)
+    for name, func in functions:
+        _import_and_load(func.__module__)
+    for name, cls in classes:
+        _import_and_load(cls.__module__)
+
+    subs: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
+    for name, sub in subs:
+        # Modules are singletons, so extending one will extend nested modules too.
+        _load_missing_modules(entry_file, sub, visited)
