@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -13,6 +15,15 @@ class ImportLocation:
     parent_name: str
     # name of the module/function/class to import
     name: str
+
+
+class CSTFunctionInjector(libcst.CSTTransformer):
+    def __init__(self, project: Project) -> None:
+        super().__init__()
+        self.project = project
+
+    def leave_Call(self, node: libcst.Call, updated_node: libcst.CSTNode):
+        return updated_node
 
 
 @dataclass
@@ -49,4 +60,36 @@ class Project:
 
     def generate_code(self):
         # TODO: Extract this method to its own CodeGenerator class
-        return ""
+        root_cst = self.get_syntax_tree(self.modules.__name__)
+        return root_cst.code
+
+    def generate_code_one_level_expanded(self, entry_func_name):
+        # TODO: Extract this method to its own CodeGenerator class
+        root_cst = self.get_syntax_tree(self.modules.__name__)
+        for node in root_cst.children:
+            if isinstance(node, libcst.FunctionDef) and node.name.value == entry_func_name:
+                entry = node
+                break
+        else:
+            return ""
+
+        # TODO: Find places where functions are called. Remove function call node
+        # Find the called function ast.
+        # Replace original call with ast. Substitute func arguments into the ast.
+        # In the injected ast, replace every "return" with the assignment, if there was an assignment.
+        # if func call is nested inside another func call, or an other expression,
+        # move result to a variable.
+        # Mind indentation
+        injector = CSTFunctionInjector(self)
+        entry.visit(injector)
+
+        return root_cst.code_for_node(entry)
+
+    # TODO: def code geenrators:
+    # - full expand a function
+    # - expand one level
+
+    # TODO: AST alteration
+    # - optimize variable usages, remove duplicated usages (asd = 7; rar = asd; => rar = 7)
+    # - create variable-function dependency graph
+    # - group together code with matching dependencies

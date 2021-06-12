@@ -1,19 +1,49 @@
 from pyprince.parser.Project import Project
 import unittest
+import textwrap
 
 from pyprince.parser import parse_project
 from tests import testutils
 
 
 class TestImportResolver(unittest.TestCase):
-
-    # TODO: Finish test
-    def test_code_generate(self):
+    def test_code_generate_simplest(self):
         test_main = testutils.get_test_scenarios_dir() / "exmp00_no_imports/main.py"
         project: Project = parse_project(test_main)
-        expected = """print("Hello pyparser")"""
+        expected = """print("Hello pyparser")\n"""
         actual = project.generate_code()
         self.assertEqual(expected, actual)
+
+    def test_code_generate_local_func(self):
+        test_main = testutils.get_test_scenarios_dir() / "exmp03_local_func/main.py"
+        project: Project = parse_project(test_main)
+        expected = textwrap.dedent(
+            """
+
+            def main():
+                everybody = ["Mom", "Dad"] + ["Grandpa", "Cousin"]
+                print(f"Family: {everybody}")
+            """
+        )
+        actual = project.generate_code_one_level_expanded("main")
+        self.assertEqual(expected, actual)
+
+    # TODO: test scenarios:
+    # - call void functon
+    # - call functon nested in another function
+    # - call functon nested in another expression (with statement? multiple assignments?)
+    # - call multiple functons nested in another function
+    # - call multiline function
+    # - called functon has multiple returns
+    # - called functon has multiple returns
+    # - create class
+    # - call class method
+    # - return inside called functions loop
+    # - no function implmentation found
+
+    # optimization scenario: (needs dependency discovery)
+    # - call Optional[], if ret is None:... -> ret is none can be merged into function code
+    # - same if condition can be merged
 
     def test_imported_names(self):
         test_main = testutils.get_test_scenarios_dir() / "exmp01_import_modules/main.py"
@@ -53,8 +83,6 @@ class TestImportResolver(unittest.TestCase):
         test_module_path("diff", "", "utils.print_different_hello")
         test_module_path("SomeGood", "", "other.SomeGood")
         test_module_path("Diff", "", "other.SomeDifferent")
-
-        # test_module_path("Test", "sub", ".mod.Test")
 
     # TODO: test relative imports in subpackage
     # TODO: test start imports

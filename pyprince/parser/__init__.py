@@ -1,4 +1,5 @@
 import inspect
+import traceback
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -88,7 +89,7 @@ def _import_module(entry_file: Path, module_name: str):
         mod = importlib.import_module(module_name)
         return mod
     except Exception as e:
-        print(f"Error while parse_modules for {entry_file}: {e}")
+        print(f"Error while parse_modules for {entry_file}: {e}\n{traceback.format_exc()}")
     finally:
         sys.path = sys.path[1:]
     return None
