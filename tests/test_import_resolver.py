@@ -29,7 +29,9 @@ class TestImportResolver(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     # TODO: test scenarios:
+    # - call functon from namespaced
     # - call void functon
+    # - call async functon
     # - call functon nested in another function
     # - call functon nested in another expression (with statement? multiple assignments?)
     # - call multiple functons nested in another function

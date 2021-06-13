@@ -8,6 +8,8 @@ import inspect
 
 import libcst
 
+import pyprince.parser.utils as ut
+
 
 @dataclass
 class ImportLocation:
@@ -21,8 +23,21 @@ class CSTFunctionInjector(libcst.CSTTransformer):
     def __init__(self, project: Project) -> None:
         super().__init__()
         self.project = project
+        self.line_can_be_replaced = False
+
+    def visit_SimpleStatementLine(self, node: libcst.SimpleStatementLine):
+        self.line_can_be_replaced = False  # reset
+
+    def leave_SimpleStatementLine(self, node: libcst.SimpleStatementLine, updated_node: libcst.SimpleStatementLine):
+        if self.line_can_be_replaced:
+            print(f"needs replace: {ut.render_node(node)}")
+        else:
+            print(f"leaving: {ut.render_node(node)}")
+        return updated_node
 
     def leave_Call(self, node: libcst.Call, updated_node: libcst.CSTNode):
+        self.line_can_be_replaced = True # True if we have the symbol ast
+        print(f"had call: {ut.render_node(node)}")
         return updated_node
 
 
