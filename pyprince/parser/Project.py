@@ -44,8 +44,9 @@ class CSTFunctionInjector(libcst.CSTTransformer):
 
         has_func = self.project.has_function(func_name)
 
-        self.line_can_be_replaced = True  # True if we have the symbol ast
-        print(f"had call: {ut.render_node(node)}")
+        # True if we have the symbol ast
+        self.line_can_be_replaced = has_func
+        # print(f"had call: {ut.render_node(node)}")
         return updated_node
 
 

@@ -1,3 +1,4 @@
+import sys
 from pyprince.parser.Project import Project
 import unittest
 import textwrap
@@ -7,6 +8,21 @@ from tests import testutils
 
 
 class TestImportResolver(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.known_mod_keys = None
+
+    def setUp(self):
+        # Remove modules that are imported during a previous test run
+        mod_keys = set(sys.modules.keys())
+        cls = type(self)
+        if cls.known_mod_keys:
+            unknown = mod_keys.difference(cls.known_mod_keys)
+            if unknown:
+                for key in unknown:
+                    sys.modules.pop(key)
+        cls.known_mod_keys = set(sys.modules.keys())
+
     def test_code_generate_simplest(self):
         test_main = testutils.get_test_scenarios_dir() / "exmp00_no_imports/main.py"
         project: Project = parse_project(test_main)

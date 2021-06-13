@@ -117,7 +117,8 @@ def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None):
                 setattr(mod, sub, sub_mod)
 
     for name, func in builtins:
-        _import_and_load(func.__module__)
+        if func.__module__:  # builtin functions may not have a module
+            _import_and_load(func.__module__)
     for name, func in functions:
         _import_and_load(func.__module__)
     for name, cls in classes:
