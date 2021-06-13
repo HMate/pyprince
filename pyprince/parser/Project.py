@@ -36,7 +36,15 @@ class CSTFunctionInjector(libcst.CSTTransformer):
         return updated_node
 
     def leave_Call(self, node: libcst.Call, updated_node: libcst.CSTNode):
-        self.line_can_be_replaced = True # True if we have the symbol ast
+        if isinstance(node.func, libcst.Name):
+            func_name = node.func.value
+        else:
+            print(f"WARNING Cannot find function name: in {type(node.func)} - {ut.render_node(node)}")
+            return updated_node
+
+        has_func = self.project.has_function(func_name)
+
+        self.line_can_be_replaced = True  # True if we have the symbol ast
         print(f"had call: {ut.render_node(node)}")
         return updated_node
 
@@ -80,12 +88,8 @@ class Project:
 
     def generate_code_one_level_expanded(self, entry_func_name):
         # TODO: Extract this method to its own CodeGenerator class
-        root_cst = self.get_syntax_tree(self.modules.__name__)
-        for node in root_cst.children:
-            if isinstance(node, libcst.FunctionDef) and node.name.value == entry_func_name:
-                entry = node
-                break
-        else:
+        entry = self.get_function(entry_func_name)
+        if not entry:
             return ""
 
         # TODO: Find places where functions are called. Remove function call node
@@ -98,7 +102,18 @@ class Project:
         injector = CSTFunctionInjector(self)
         entry.visit(injector)
 
-        return root_cst.code_for_node(entry)
+        return ut.render_node(entry)
+
+    def has_function(self, func_name: str) -> bool:
+        return self.get_function(func_name) is not None
+
+    def get_function(self, func_name: str):
+        root_cst = self.get_syntax_tree(self.modules.__name__)
+        for node in root_cst.children:
+            if isinstance(node, libcst.FunctionDef) and node.name.value == func_name:
+                return node
+        else:
+            return None
 
     # TODO: def code geenrators:
     # - full expand a function

@@ -29,6 +29,7 @@ class TestImportResolver(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     # TODO: test scenarios:
+    # - nest code in different module than main - maybe nest previously nested code -> definition maybe in another module
     # - call functon from namespaced
     # - call void functon
     # - call async functon
