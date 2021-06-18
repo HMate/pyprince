@@ -46,6 +46,8 @@ class TestImportResolver(unittest.TestCase):
 
     # TODO: test scenarios:
     # - nest code in different module than main - maybe nest previously nested code -> definition maybe in another module
+    # - substitute named arg
+    # - substitute star, or kw args in called functions
     # - call functon from namespaced
     # - call void functon
     # - call async functon
@@ -59,6 +61,7 @@ class TestImportResolver(unittest.TestCase):
     # - call class method
     # - return inside called functions loop
     # - no function implmentation found
+    # - exceptions inside, outside, func called/returning in except, finally etc
 
     # optimization scenario: (needs dependency discovery)
     # - call Optional[], if ret is None:... -> ret is none can be merged into function code
