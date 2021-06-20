@@ -3,53 +3,15 @@ import traceback
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Sequence
+from typing import Optional
 import importlib, importlib.util
 
-from pyprince.parser.Project import ImportLocation, Project
-from pyprince.parser.ImportResolver import ImportResolver
+from pyprince.parser.Project import Project
 
 import libcst
-from libcst.tool import dump
-
-
-class CSTImportResolver(libcst.CSTTransformer):
-    def __init__(self, project: Project) -> None:
-        super().__init__()
-        self.project = project
-
-    def visit_Import(self, node: libcst.Import):
-        """The whole of: import mod"""
-        print(f"myvisit: {[nm.evaluated_name for nm in node.names]}")
-        for name in node.names:
-            alias = name.evaluated_alias
-            if alias is None:
-                alias = name.evaluated_name
-            self.project.add_import(alias, ImportLocation("", name.evaluated_name))
-
-    def visit_ImportFrom(self, node: libcst.ImportFrom):
-        """The whole of: from pack import mod"""
-        package = ""
-        # None==node.module means we are importing relatively from own package
-        # ie. from . import mod
-        if node.module is not None:
-            package = f"{node.module.value}."
-        print(f"import from: {package}")
-        if isinstance(node.names, Sequence):
-            for name in node.names:
-                alias = name.evaluated_alias
-                if alias is None:
-                    alias = name.evaluated_name
-                self.project.add_import(alias, ImportLocation("", f"{package}{name.evaluated_name}"))
 
 
 def parse_project(entry_file: Path) -> Project:
-
-    # Want to: recursively inject ast from imported module in the place of module/class/function references
-    # - collect all files we need ast for
-    # - parse ast of files
-    # - map imports to asts
-    # - map module/class/function reference to ast node
     modules = parse_modules_recursively(entry_file)
 
     proj = Project(modules)
@@ -61,9 +23,6 @@ def parse_project(entry_file: Path) -> Project:
         content = module_path.read_text(encoding="UTF8")
         cst: libcst.Module = libcst.parse_module(content)
         proj.add_syntax_tree(mod, cst)
-
-    resolver = CSTImportResolver(proj)
-    # cst.visit(resolver)
 
     return proj
 

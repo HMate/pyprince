@@ -6,6 +6,7 @@ import tests.testutils as testutils
 from tests.testutils import PackageGenerator
 from pyprince.parser.Project import Project
 from pyprince.parser import parse_project
+from pyprince import generators
 
 
 class TestCodeGenerator(unittest.TestCase):
@@ -24,7 +25,7 @@ class TestCodeGenerator(unittest.TestCase):
 
         project: Project = parse_project(self.test_root / test_name / "main.py")
         expected = """print("Hello pyparser")\n"""
-        actual = project.generate_code()
+        actual = generators.generate_code(project)
         self.assertEqual(expected, actual)
 
     def test_code_generate_local_func(self):
@@ -54,7 +55,7 @@ class TestCodeGenerator(unittest.TestCase):
                 print(f"Family: {everybody}")
             """
         ).strip()
-        actual = project.generate_code_one_level_expanded("main").strip()
+        actual = generators.generate_code_one_level_expanded(project, "main").strip()
         self.assertEqual(expected, actual)
 
     def test_code_inject_void_func(self):
@@ -82,7 +83,7 @@ class TestCodeGenerator(unittest.TestCase):
                 print(f"Family: {["Mom", "Dad"] + ["Grandpa", "Cousin"]}")
             """
         ).strip()
-        actual = project.generate_code_one_level_expanded("main").strip()
+        actual = generators.generate_code_one_level_expanded(project, "main").strip()
         self.assertEqual(expected, actual)
 
     def test_code_inject_module_func(self):
@@ -117,7 +118,7 @@ class TestCodeGenerator(unittest.TestCase):
                 print(f"Family: {["Mom", "Dad"] + ["Grandpa", "Cousin"]}")
             """
         ).strip()
-        actual = project.generate_code_one_level_expanded("main").strip()
+        actual = generators.generate_code_one_level_expanded(project, "main").strip()
         self.assertEqual(expected, actual)
 
     # TODO: test scenarios:
