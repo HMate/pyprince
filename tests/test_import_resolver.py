@@ -1,10 +1,12 @@
 import sys
-from pyprince.parser.Project import Project
 import unittest
 import textwrap
+from pathlib import Path
 
 from pyprince.parser import parse_project
 from tests import testutils
+from tests.testutils import PackageGenerator
+from pyprince.parser.Project import Project
 
 
 class TestImportResolver(unittest.TestCase):
@@ -13,6 +15,7 @@ class TestImportResolver(unittest.TestCase):
         cls.known_mod_keys = None
 
     def setUp(self):
+        self.test_root = testutils.get_test_scenarios_dir()
         # Remove modules that are imported during a previous test run
         mod_keys = set(sys.modules.keys())
         cls = type(self)
@@ -24,14 +27,40 @@ class TestImportResolver(unittest.TestCase):
         cls.known_mod_keys = set(sys.modules.keys())
 
     def test_code_generate_simplest(self):
-        test_main = testutils.get_test_scenarios_dir() / "exmp00_no_imports/main.py"
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent("""print("Hello pyparser")\n"""),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
         project: Project = parse_project(test_main)
         expected = """print("Hello pyparser")\n"""
         actual = project.generate_code()
         self.assertEqual(expected, actual)
 
     def test_code_generate_local_func(self):
-        test_main = testutils.get_test_scenarios_dir() / "exmp03_local_func/main.py"
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                def some_functionality(parents, relatives):
+                    return parents + relatives
+
+
+                def main():
+                    everybody = some_functionality(["Mom", "Dad"], ["Grandpa", "Cousin"])
+                    print(f"Family: {everybody}")
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
         project: Project = parse_project(test_main)
         expected = textwrap.dedent(
             """
@@ -68,7 +97,58 @@ class TestImportResolver(unittest.TestCase):
     # - same if condition can be merged
 
     def test_imported_names(self):
-        test_main = testutils.get_test_scenarios_dir() / "exmp01_import_modules/main.py"
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import os
+                import pathlib as pl
+                import os.path
+                import sys, abc
+                from time import thread_time
+
+                import other
+                from utils import print_hello
+                from utils import print_different_hello as diff
+                from other import SomeGood, SomeDifferent as Diff
+
+                print("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "other.py",
+            textwrap.dedent(
+                """
+                class SomeGood:
+                    def __init__(self, name):
+                        self.name = name
+
+
+                class SomeDifferent:
+                    def __init__(self, name_other):
+                        self.name = name_other
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "utils.py",
+            textwrap.dedent(
+                """
+                def print_hello():
+                    print("Hello")
+
+                def print_different_hello():
+                    print("Hello")
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+
         project: Project = parse_project(test_main)
         self.assertIsNotNone(project)
         self.assertIsNotNone(project.get_syntax_tree("os"))
@@ -83,7 +163,57 @@ class TestImportResolver(unittest.TestCase):
 
     # TODO: this test is obsolete, rewrite for new parse
     def test_imported_paths(self):
-        test_main = testutils.get_test_scenarios_dir() / "exmp01_import_modules/main.py"
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import os
+                import pathlib as pl
+                import os.path
+                import sys, abc
+                from time import thread_time
+
+                import other
+                from utils import print_hello
+                from utils import print_different_hello as diff
+                from other import SomeGood, SomeDifferent as Diff
+
+                print("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "other.py",
+            textwrap.dedent(
+                """
+                class SomeGood:
+                    def __init__(self, name):
+                        self.name = name
+
+
+                class SomeDifferent:
+                    def __init__(self, name_other):
+                        self.name = name_other
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "utils.py",
+            textwrap.dedent(
+                """
+                def print_hello():
+                    print("Hello")
+
+                def print_different_hello():
+                    print("Hello")
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
         project: Project = parse_project(test_main)
 
         def test_module_path(alias, path, name):
