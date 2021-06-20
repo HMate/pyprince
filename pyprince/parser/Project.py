@@ -191,7 +191,6 @@ class Project:
         # In the injected ast, replace every "return" with the assignment, if there was an assignment.
         # if func call is nested inside another func call, or an other expression,
         # move result to a variable.
-        # Mind indentation
         injector = CSTFunctionInjector(self)
         expanded = entry.visit(injector)
 
@@ -201,14 +200,34 @@ class Project:
         return self.get_function(func_name) is not None
 
     def get_function(self, func_name: str):
-        root_cst = self.get_syntax_tree(self.modules.__name__)
+        module_name = self._find_module_for_function(func_name)
+        if not module_name:
+            return None
+        root_cst = self.get_syntax_tree(module_name)
         for node in root_cst.children:
             if isinstance(node, libcst.FunctionDef) and node.name.value == func_name:
                 return node
         else:
             return None
 
-    # TODO: def code geenrators:
+    def _find_module_for_function(self, func_name: str) -> Optional[str]:
+        functions: list[tuple[str, function]] = inspect.getmembers(self.modules, inspect.isfunction)
+        for name, func in functions:
+            if name == func_name:
+                return func.__module__
+        return None
+
+    # TODO: Split to classes:
+    # - CodeGenerator - generate code for project/module/function
+    # - CodeTransformer - Expands function calls, substitute variables, adds/removes new code nodes
+    #     Xpand single function call
+    #     Xpand all functions calls one level in single function
+    #     Xpand all functions calls until possible in a single function
+    #     Xpand all functions calls until possible in whole module (remove unused functions?)
+    # - Project/Module/Function - Own AST wrappers? So searching, modifiying is easier
+    #     These should also store the structure of the original source, provide mapping between the two
+
+    # TODO: def code generators:
     # - full expand a function
     # - expand one level
 

@@ -85,23 +85,59 @@ class TestCodeGenerator(unittest.TestCase):
         actual = project.generate_code_one_level_expanded("main").strip()
         self.assertEqual(expected, actual)
 
+    def test_code_inject_module_func(self):
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                from util import some_functionality
+
+                def main():
+                    some_functionality(["Mom", "Dad"], ["Grandpa", "Cousin"])
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "util.py",
+            textwrap.dedent(
+                """
+                def some_functionality(parents, relatives):
+                    print(f"Family: {parents + relatives}")
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py")
+        expected = textwrap.dedent(
+            """
+            def main():
+                print(f"Family: {["Mom", "Dad"] + ["Grandpa", "Cousin"]}")
+            """
+        ).strip()
+        actual = project.generate_code_one_level_expanded("main").strip()
+        self.assertEqual(expected, actual)
+
     # TODO: test scenarios:
-    # - nest code in different module than main - maybe nest previously nested code -> definition maybe in another module
     # - substitute named arg
     # - substitute star, or kw args in called functions
-    # - call functon from namespaced
+    # - call functon from namespace
+    # - call functon from alias
     # - call empty return functon
     # - call async functon
     # - call functon nested in another function
     # - call functon nested in another expression (with statement? multiple assignments?)
     # - call multiple functons nested in another function
     # - call multiline function
+    # - expand function that originated from another expanded function, and is declared in module thats unimported by main
     # - called functon has multiple returns
-    # - called functon has multiple returns
+    # - called recursive functon
     # - create class
     # - call class method
     # - return inside called functions loop
-    # - no function implmentation found
+    # - no function implementation found
     # - exceptions inside, outside, func called/returning in except, finally etc
 
     # Convert/transform complicated language constructs to a given simplified language subset
