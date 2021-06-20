@@ -22,8 +22,7 @@ class TestCodeGenerator(unittest.TestCase):
         )
         gen.generate_files(self.test_root)
 
-        test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(self.test_root / test_name / "main.py")
         expected = """print("Hello pyparser")\n"""
         actual = project.generate_code()
         self.assertEqual(expected, actual)
@@ -47,17 +46,43 @@ class TestCodeGenerator(unittest.TestCase):
         )
         gen.generate_files(self.test_root)
 
-        test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(self.test_root / test_name / "main.py")
         expected = textwrap.dedent(
             """
-
             def main():
                 everybody = ["Mom", "Dad"] + ["Grandpa", "Cousin"]
                 print(f"Family: {everybody}")
             """
+        ).strip()
+        actual = project.generate_code_one_level_expanded("main").strip()
+        self.assertEqual(expected, actual)
+
+    def test_code_inject_void_func(self):
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                def some_functionality(parents, relatives):
+                    print(f"Family: {parents + relatives}")
+
+
+                def main():
+                    some_functionality(["Mom", "Dad"], ["Grandpa", "Cousin"])
+                """
+            ).lstrip(),
         )
-        actual = project.generate_code_one_level_expanded("main")
+        gen.generate_files(self.test_root)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py")
+        expected = textwrap.dedent(
+            """
+            def main():
+                print(f"Family: {["Mom", "Dad"] + ["Grandpa", "Cousin"]}")
+            """
+        ).strip()
+        actual = project.generate_code_one_level_expanded("main").strip()
         self.assertEqual(expected, actual)
 
     # TODO: test scenarios:
@@ -65,7 +90,7 @@ class TestCodeGenerator(unittest.TestCase):
     # - substitute named arg
     # - substitute star, or kw args in called functions
     # - call functon from namespaced
-    # - call void functon
+    # - call empty return functon
     # - call async functon
     # - call functon nested in another function
     # - call functon nested in another expression (with statement? multiple assignments?)
@@ -79,6 +104,17 @@ class TestCodeGenerator(unittest.TestCase):
     # - no function implmentation found
     # - exceptions inside, outside, func called/returning in except, finally etc
 
+    # Convert/transform complicated language constructs to a given simplified language subset
+    # - Classes are functions that recieve a common data structure
+    # - asyn?
+    # - generators
+    # - lambdas
+    # - for <-> while
+    # - list.map() -> to for loop
+    # - multiple assigns, statements can be spread to multiple lines
+
     # optimization scenario: (needs dependency discovery)
     # - call Optional[], if ret is None:... -> ret is none can be merged into function code
     # - same if condition can be merged
+    # - operations on literals can be executed statically. eg [1]+[2] = [1, 2]
+    #   - This can be generlaized-> move literal operations together as possible, execute statically

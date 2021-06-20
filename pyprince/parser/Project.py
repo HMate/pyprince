@@ -102,23 +102,39 @@ class CSTFunctionInjector(libcst.CSTTransformer):
                         # function is a single SimpleStatementLine, and it is a return
                         params = func_def.params.params
                         returned_value = expr.value.deep_clone()
-                        for i, param in enumerate(params):
-                            param_name = param.name.value
-                            # search any variable use in returned value, that uses this param
-                            # get matching args from call, and substitute them in into the returned val
-                            # print(f"Start locator with {param_name}")
-                            arg = call_node.args[i].value
-                            locator = CSTVariableReplacer(param_name, arg)
-                            changed = returned_value.visit(locator)
-                            if isinstance(changed, libcst.BaseExpression):
-                                returned_value = changed
+                        returned_value = self._substitute_args_into_expression(returned_value, params, call_node.args)
+
+                        changed_line = enclosing_node.with_changes(value=returned_value)
+                        replacer = CSTNodeReplacer(enclosing_node, changed_line)
+                        result = result.visit(replacer)
+            elif isinstance(enclosing_node, libcst.Expr):
+                if len(func_def.body.body) == 1:
+                    expr = func_def.body.body[0].body[0]
+                    if (isinstance(expr, libcst.Expr)) and expr.value is not None:
+                        # function is a single SimpleStatementLine, but not a return
+                        params = func_def.params.params
+                        code_line = expr.value.deep_clone()
+                        returned_value = self._substitute_args_into_expression(code_line, params, call_node.args)
 
                         changed_line = enclosing_node.with_changes(value=returned_value)
                         replacer = CSTNodeReplacer(enclosing_node, changed_line)
                         result = result.visit(replacer)
         return result
 
+    def _substitute_args_into_expression(self, expr, params, args):
+        for i, param in enumerate(params):
+            param_name = param.name.value
+            # search any variable use in returned value, that uses this param
+            # get matching args from call, and substitute them in into the returned val
+            arg = args[i].value
+            locator = CSTVariableReplacer(param_name, arg)
+            changed = expr.visit(locator)
+            if isinstance(changed, libcst.BaseExpression):
+                expr = changed
+        return expr
+
     def _get_call_node_name(self, node: libcst.Call):
+        """Get the name of the function that is invoked in libcst.Call node"""
         if isinstance(node.func, libcst.Name):
             return node.func.value
         else:
