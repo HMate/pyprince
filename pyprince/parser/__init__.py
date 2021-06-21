@@ -22,7 +22,7 @@ def parse_project(entry_file: Path) -> Project:
         module_path = Path(mod.__file__)
         content = module_path.read_text(encoding="UTF8")
         cst: libcst.Module = libcst.parse_module(content)
-        proj.add_syntax_tree(mod, cst)
+        proj.add_syntax_tree(mod.__name__, cst)
 
     return proj
 

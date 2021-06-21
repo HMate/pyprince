@@ -12,15 +12,20 @@ import libcst
 class Project:
     # The mapping of aliases to importLocations
     modules: Optional[ModuleType]
-    syntax_trees: dict[str, tuple[ModuleType, libcst.Module]] = field(default_factory=dict)
+    _syntax_trees: dict[str, libcst.Module] = field(default_factory=dict)
 
-    def add_syntax_tree(self, module: ModuleType, st: libcst.Module):
-        self.syntax_trees[module.__name__] = (module, st)
+    def add_syntax_tree(self, module_name: str, st: libcst.Module):
+        self._syntax_trees[module_name] = st
 
-    def get_syntax_tree(self, module_name: str):
-        if module_name not in self.syntax_trees:
+    def get_syntax_tree(self, module_name: str) -> Optional[libcst.Module]:
+        if module_name not in self._syntax_trees:
             return None
-        return self.syntax_trees[module_name][1]
+        return self._syntax_trees[module_name]
+
+    def clone(self) -> Project:
+        cl = Project(self.modules)
+        cl._syntax_trees = self._syntax_trees.copy()
+        return cl
 
     def iter_modules(self) -> Iterable[ModuleType]:
         if not self.modules:
@@ -40,38 +45,43 @@ class Project:
         return self.get_function(func_name) is not None
 
     def get_function(self, func_name: str):
-        module_name = self._find_module_for_function(func_name)
-        if not module_name:
+        name, module = self.find_module_for_function(func_name)
+        if not module:
             return None
-        root_cst = self.get_syntax_tree(module_name)
-        for node in root_cst.children:
+        for node in module.children:
             if isinstance(node, libcst.FunctionDef) and node.name.value == func_name:
                 return node
         else:
             return None
 
-    def _find_module_for_function(self, func_name: str) -> Optional[str]:
+    def find_module_for_function(self, func_name: str) -> tuple[Optional[str], Optional[libcst.Module]]:
         functions: list[tuple[str, function]] = inspect.getmembers(self.modules, inspect.isfunction)
         for name, func in functions:
             if name == func_name:
-                return func.__module__
-        return None
+                return func.__module__, self.get_syntax_tree(func.__module__)
+        return None, None
 
     # TODO: Split to classes:
     # - CodeGenerator - generate code for project/module/function
     # - CodeTransformer - Expands function calls, substitute variables, adds/removes new code nodes
     #     Xpand single function call
     #     Xpand all functions calls one level in single function
-    #     Xpand all functions calls until possible in a single function
+    #     Xpand all functions calls until possible for a single function
     #     Xpand all functions calls until possible in whole module (remove unused functions?)
     # - Project/Module/Function - Own AST wrappers? So searching, modifiying is easier
     #     These should also store the structure of the original source, provide mapping between the two
 
-    # TODO: def code generators:
-    # - full expand a function
-    # - expand one level
-
-    # TODO: AST alteration
+    # TODO: AST optimization
     # - optimize variable usages, remove duplicated usages (asd = 7; rar = asd; => rar = 7)
-    # - create variable-function dependency graph
     # - group together code with matching dependencies
+
+    # TODO: explore data/control dependencies
+    # for a given function/variable, provide in a list the chains of all dependencies up until user input locations
+
+    # TODO: Choosable base constructs
+    # while <-> for
+    # functional/OO/structural
+
+    # TODO: Create a code format that is syntax independent.
+    # - parameters are order independent
+    # - statements and expression are dependent on their actual dependencies, constructing a graph

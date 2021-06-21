@@ -6,6 +6,7 @@ import tests.testutils as testutils
 from tests.testutils import PackageGenerator
 from pyprince.parser.Project import Project
 from pyprince.parser import parse_project
+from pyprince.transformators import Transformator
 from pyprince import generators
 
 
@@ -55,7 +56,8 @@ class TestCodeGenerator(unittest.TestCase):
                 print(f"Family: {everybody}")
             """
         ).strip()
-        actual = generators.generate_code_one_level_expanded(project, "main").strip()
+        transformed = Transformator(project).expand_function("main").proj.get_function("main")
+        actual = generators.render_node(transformed).strip()  # type: ignore
         self.assertEqual(expected, actual)
 
     def test_code_inject_void_func(self):
@@ -83,7 +85,8 @@ class TestCodeGenerator(unittest.TestCase):
                 print(f"Family: {["Mom", "Dad"] + ["Grandpa", "Cousin"]}")
             """
         ).strip()
-        actual = generators.generate_code_one_level_expanded(project, "main").strip()
+        transformed = Transformator(project).expand_function("main").proj.get_function("main")
+        actual = generators.render_node(transformed).strip()  # type: ignore
         self.assertEqual(expected, actual)
 
     def test_code_inject_module_func(self):
@@ -118,7 +121,8 @@ class TestCodeGenerator(unittest.TestCase):
                 print(f"Family: {["Mom", "Dad"] + ["Grandpa", "Cousin"]}")
             """
         ).strip()
-        actual = generators.generate_code_one_level_expanded(project, "main").strip()
+        transformed = Transformator(project).expand_function("main").proj.get_function("main")
+        actual = generators.render_node(transformed).strip()  # type: ignore
         self.assertEqual(expected, actual)
 
     # TODO: test scenarios:
@@ -133,17 +137,20 @@ class TestCodeGenerator(unittest.TestCase):
     # - call multiple functons nested in another function
     # - call multiline function
     # - expand function that originated from another expanded function, and is declared in module thats unimported by main
+    # - expand function that is declared in module thats unimported by main, and function with this name can be found in multiple modules
     # - called functon has multiple returns
     # - called recursive functon
     # - create class
     # - call class method
+    # - threads
     # - return inside called functions loop
     # - no function implementation found
     # - exceptions inside, outside, func called/returning in except, finally etc
 
     # Convert/transform complicated language constructs to a given simplified language subset
     # - Classes are functions that recieve a common data structure
-    # - asyn?
+    # - async/await
+    # - threads
     # - generators
     # - lambdas
     # - for <-> while
