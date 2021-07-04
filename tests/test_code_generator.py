@@ -4,8 +4,7 @@ import textwrap
 
 import tests.testutils as testutils
 from tests.testutils import PackageGenerator
-from pyprince.parser.Project import Project
-from pyprince.parser import parse_project
+from pyprince.parser import parse_project, Project
 from pyprince.transformators import Transformator
 from pyprince import generators
 
@@ -140,6 +139,7 @@ class TestCodeGenerator(unittest.TestCase):
     # - expand function that is declared in module thats unimported by main, and function with this name can be found in multiple modules
     # - called functon has multiple returns
     # - called recursive functon
+    # - walrus := assignment
     # - create class
     # - call class method
     # - threads
@@ -147,11 +147,14 @@ class TestCodeGenerator(unittest.TestCase):
     # - no function implementation found
     # - exceptions inside, outside, func called/returning in except, finally etc
 
-    # Convert/transform complicated language constructs to a given simplified language subset
-    # - Classes are functions that recieve a common data structure
+    # Normalization - Convert/transform complicated language constructs to a given simplified language subset
+    # - Classes are functions that receive a common data structure
+    # - walrus := assignment
     # - async/await
+    # - exception try/catch/finally
     # - threads
-    # - generators
+    # - decorators/wrappers
+    # - generators/comprehensions
     # - lambdas
     # - for <-> while
     # - list.map() -> to for loop

@@ -40,6 +40,8 @@ class FunctionExpander(libcst.CSTTransformer):
     def _inject_functions(self, root: libcst.CSTNode):
         # print(f"Injecting these:")
         result = root
+        # TODO: if func call is nested inside another func call, or an other expression,
+        # move result to a variable.
         for path in self.call_paths:
             call_node: libcst.Call = path[-1]  # type: ignore
             func_name = self._get_call_node_name(call_node)
