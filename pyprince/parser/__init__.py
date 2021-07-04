@@ -17,8 +17,13 @@ def parse_project(entry_file: Path) -> Project:
     proj = Project(modules)
 
     for mod in proj.iter_modules():
-        if (not hasattr(mod, "__path__")) and mod.__spec__.origin == "built-in":
+        if not hasattr(mod, "__path__"):
+            # TODO: Do some logging here, to see what modules are skipped and why
             continue  # Module is builtin, we dont have the source
+        if not hasattr(mod, "__file__"):
+            continue  # TODO: This is for frozen modules, like zipimport. Why no source?
+        if mod.__file__.endswith(".pyd"):
+            continue  # Module is in binary form, we dont have the source
         module_path = Path(mod.__file__)
         content = module_path.read_text(encoding="UTF8")
         cst: libcst.Module = libcst.parse_module(content)

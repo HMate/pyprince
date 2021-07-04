@@ -147,6 +147,12 @@ class TestCodeGenerator(unittest.TestCase):
     # - no function implementation found
     # - exceptions inside, outside, func called/returning in except, finally etc
 
+    # Locate modules inside virtualenvs, find associated virtualenvs of projects
+    # - .env inside project
+    # - pipenv
+    # - poetry
+    # - fallback on requirements.txt - create isolated virtualenv?
+
     # Normalization - Convert/transform complicated language constructs to a given simplified language subset
     # - Classes are functions that receive a common data structure
     # - walrus := assignment
@@ -159,6 +165,7 @@ class TestCodeGenerator(unittest.TestCase):
     # - for <-> while
     # - list.map() -> to for loop
     # - multiple assigns, statements can be spread to multiple lines
+    # - string interpolation, formating
 
     # optimization scenario: (needs dependency discovery)
     # - call Optional[], if ret is None:... -> ret is none can be merged into function code

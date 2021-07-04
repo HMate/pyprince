@@ -1,5 +1,7 @@
 *.pyc
 __pycache__/
 
+*.html
+
 .vscode/
 tests/test_scenarios
