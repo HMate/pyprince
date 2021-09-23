@@ -9,12 +9,12 @@ python = "^3.9"
 libcst = "^0.3.18"
 typer = "^0.3.2"
 fs = "^2.4.13"
-pylint = "^2.8.3"
-pyvis = "^0.1.9"
+orjson = "^3.6.3"
 
 [tool.poetry.dev-dependencies]
 black = { version = "^20.8b1", allow-prereleases = true }
 pytest = "^6.2.3"
+pylint = "^2.8.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
