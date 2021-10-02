@@ -41,12 +41,11 @@ def describe_module_dependencies(proj: Project):
     if not proj.modules:
         return result.to_dict()
 
-    def _recursively_enumerate_submodules(mod: ModuleType, visited: dict[ModuleType, int]):
+    def _recursively_enumerate_submodules(mod: ModuleType, visited: set[ModuleType]):
         if mod not in visited:
             node_id = len(visited)
-            visited[mod] = node_id
+            visited.add(mod)
             result.add_node(mod.__name__)
-        node_id = visited[mod]
 
         subs: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
         for name, sub in subs:
@@ -54,10 +53,9 @@ def describe_module_dependencies(proj: Project):
                 continue
             if sub not in visited:
                 _recursively_enumerate_submodules(sub, visited)
-            sub_id = visited[sub]
-            result.add_edge(mod.__name__, name)
+            result.add_edge(mod.__name__, sub.__name__)
 
-    visited = {}
+    visited = set()
     _recursively_enumerate_submodules(proj.modules, visited)
 
     return result.to_dict()
