@@ -45,6 +45,19 @@ class TestDescribeModuleDependency(unittest.TestCase):
 
     def test_json_serialize(self):
         raw = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
-        expected = b'{"nodes":["main","util"],"edges":{"main":["util"]}}'
+        expected = textwrap.dedent(
+            """\
+            {
+              "nodes": [
+                "main",
+                "util"
+              ],
+              "edges": {
+                "main": [
+                  "util"
+                ]
+              }
+            }"""
+        ).encode()
         actual = serializer.to_json(raw)
         self.assertEqual(expected, actual)
