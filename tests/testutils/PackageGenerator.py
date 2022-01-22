@@ -13,7 +13,7 @@ class PackageGenerator:
     def generate_files(self, root: PathLike, clear_root: bool = True):
         root = Path(root)
         if clear_root:
-            shutil.rmtree(root)
+            shutil.rmtree(root, ignore_errors=True)
         root.mkdir(parents=True, exist_ok=True)
         for rel_path, content in self.files.items():
             file_path = root / rel_path

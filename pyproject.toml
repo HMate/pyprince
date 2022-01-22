@@ -6,7 +6,7 @@ authors = ["HMate <mhidvegi@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-libcst = "^0.3.18"
+libcst = "^0.4.0"
 typer = "^0.3.2"
 fs = "^2.4.13"
 orjson = "^3.6.3"
