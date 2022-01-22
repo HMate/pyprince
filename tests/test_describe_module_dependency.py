@@ -61,3 +61,24 @@ class TestDescribeModuleDependency(unittest.TestCase):
         ).encode()
         actual = serializer.to_json(raw)
         self.assertEqual(expected, actual)
+
+    def test_io_module(self):
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import io
+
+                def main():
+                    print("asd")
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py")
+        expected = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
+        actual = generators.describe_module_dependencies(project)
+        self.assertDictEqual(expected, actual)

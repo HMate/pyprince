@@ -44,7 +44,7 @@ def describe_module_dependencies(proj: Project):
     def _recursively_enumerate_submodules(mod: ModuleType, visited: set[ModuleType]):
         if mod not in visited:
             node_id = len(visited)
-            visited.add(mod)
+            visited.add(mod) #mod._spec__.name
             result.add_node(mod.__name__)
 
         subs: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)

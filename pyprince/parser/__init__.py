@@ -24,10 +24,13 @@ def parse_project(entry_file: Path) -> Project:
         #     logger.log(f"Skipping syntax tree of {mod.__name__}, no __path__ in it")
         #     continue  # Module is builtin, we dont have the source
         if not hasattr(mod, "__file__"):
-            logger.log(f"Skipping syntax tree of {mod.__name__}, no __file__ in it")
+            # logger.log(f"Skipping syntax tree of {mod.__name__}, no __file__ in it")
             continue  # TODO: This is for frozen modules, like zipimport. Why no source?
         if mod.__file__.endswith(".pyd"):
             logger.log(f"Skipping syntax tree of {mod.__name__}, it is .pyd file")
+            continue  # Module is in binary form, we dont have the source
+        if mod.__file__.endswith(".so"):
+            logger.log(f"Skipping syntax tree of {mod.__name__}, it is .so file")
             continue  # Module is in binary form, we dont have the source
         module_path = Path(mod.__file__)
         content = module_path.read_text(encoding="UTF8")
