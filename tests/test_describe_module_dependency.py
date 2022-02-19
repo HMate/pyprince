@@ -69,20 +69,42 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
             textwrap.dedent(
                 """
                 import io
-
-                def main():
-                    print("asd")
                 """
             ).lstrip(),
         )
         gen.generate_files(self.test_root)
 
         project: Project = parse_project(self.test_root / test_name / "main.py")
-        expected = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
+        expectedNodes = [
+            "main",
+            "io",
+            "_io",
+            "_frozen_importlib",
+            "_frozen_importlib_external",
+            "_imp",
+            "nt",
+            "builtins",
+            "os",
+            "abc",
+            "_abc",
+            "collections.abc",
+            "ntpath",
+            "genericpath",
+            "stat",
+            "_stat",
+            "sys",
+            "site",
+            "_sitebuiltins",
+            "types",
+            "_warnings",
+            "marshal",
+            "winreg",
+            "_thread",
+            "_weakref",
+        ]
         # module dependencie nodes should be unique. The built-in io can lie about this
         actual = generators.describe_module_dependencies(project)
-        print(actual)
         self.assertListElementsAreUnique(actual["nodes"])
-        self.assertDictEqual(expected, actual)
+        self.assertListEqual(expectedNodes, actual["nodes"])
 
     # TODO: Additional test case: create 2 submodules with the same name, see if node names are unique

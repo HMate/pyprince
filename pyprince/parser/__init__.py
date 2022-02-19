@@ -67,9 +67,16 @@ def _import_module(entry_file: Path, module_name: str):
     return None
 
 
-def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None):
+def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None, debug_path=None):
     if visited == None:
         visited = []
+
+    # This is for debbugging, to see which on which module include path did we arrive here
+    if debug_path == None:
+        debug_path = []
+    current_debug_path = list(debug_path)
+    current_debug_path.append(mod)
+
     if mod in visited:
         return
     visited.append(mod)
@@ -99,4 +106,4 @@ def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None):
     subs: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
     for name, sub in subs:
         # Modules are singletons, so extending one will extend nested modules too.
-        _load_missing_modules(entry_file, sub, visited)
+        _load_missing_modules(entry_file, sub, visited, current_debug_path)

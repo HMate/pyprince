@@ -21,7 +21,11 @@ def generate_code(proj: Project) -> str:
 
 
 def describe_module_dependencies(proj: Project):
-    """Generates a json which describes all the dependencies between modules"""
+    """
+    Generates a json which describes all the dependencies between modules.
+    The json contains node names, and edges between nodes.
+    The node names are unique.
+    """
 
     class DependencyDescriptor:
         def __init__(self) -> None:
@@ -44,8 +48,8 @@ def describe_module_dependencies(proj: Project):
     def _recursively_enumerate_submodules(mod: ModuleType, visited: set[ModuleType]):
         if mod not in visited:
             node_id = len(visited)
-            visited.add(mod) #mod._spec__.name
-            result.add_node(mod.__name__)
+            visited.add(mod)
+            result.add_node(get_module_name(mod))
 
         subs: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
         for name, sub in subs:
@@ -53,9 +57,15 @@ def describe_module_dependencies(proj: Project):
                 continue
             if sub not in visited:
                 _recursively_enumerate_submodules(sub, visited)
-            result.add_edge(mod.__name__, sub.__name__)
+            result.add_edge(get_module_name(mod), get_module_name(sub))
 
     visited = set()
     _recursively_enumerate_submodules(proj.modules, visited)
 
     return result.to_dict()
+
+
+def get_module_name(mod: ModuleType) -> str:
+    if hasattr(mod, "__spec__"):
+        return mod.__spec__.name
+    return mod._spec__.name
