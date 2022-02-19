@@ -23,3 +23,4 @@ def remove_imported_modules():
 
 
 from .PackageGenerator import PackageGenerator
+from .PyPrinceTestCase import PyPrinceTestCase

@@ -1,14 +1,13 @@
-import unittest
 from pathlib import Path
 import textwrap
 
 import tests.testutils as testutils
-from tests.testutils import PackageGenerator
+from tests.testutils import PackageGenerator, PyPrinceTestCase
 from pyprince.parser import parse_project, Project
 from pyprince import generators, serializer
 
 
-class TestDescribeModuleDependency(unittest.TestCase):
+class TestDescribeModuleDependency(PyPrinceTestCase):
     def setUp(self):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()
@@ -80,5 +79,10 @@ class TestDescribeModuleDependency(unittest.TestCase):
 
         project: Project = parse_project(self.test_root / test_name / "main.py")
         expected = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
+        # module dependencie nodes should be unique. The built-in io can lie about this
         actual = generators.describe_module_dependencies(project)
+        print(actual)
+        self.assertListElementsAreUnique(actual["nodes"])
         self.assertDictEqual(expected, actual)
+
+    # TODO: Additional test case: create 2 submodules with the same name, see if node names are unique
