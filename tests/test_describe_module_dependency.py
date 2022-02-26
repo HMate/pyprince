@@ -40,10 +40,14 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         project: Project = parse_project(self.test_root / test_name / "main.py")
         expected = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
         actual = generators.describe_module_dependencies(project)
-        self.assertDictEqual(expected, actual)
+        self.assertDictEqual(expected, actual.to_dict())
 
     def test_json_serialize(self):
-        raw = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
+        deps = generators.DependencyDescriptor()
+        deps.add_node("main")
+        deps.add_node("util")
+        deps.add_edge("main", "util")
+
         expected = textwrap.dedent(
             """\
             {
@@ -57,8 +61,30 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
                 ]
               }
             }"""
-        ).encode()
-        actual = serializer.to_json(raw)
+        )
+        actual = serializer.to_json(deps)
+        self.assertEqual(expected, actual)
+
+    def test_graphviz_serialize(self):
+        deps = generators.DependencyDescriptor()
+        deps.add_node("main")
+        deps.add_node("util")
+        deps.add_node("belize")
+        deps.add_node("femme")
+        deps.add_edge("main", "util")
+        deps.add_edge("main", "belize")
+        deps.add_edge("util", "femme")
+        deps.add_edge("femme", "main")
+        expected = textwrap.dedent(
+            """\
+            digraph G {
+                "main" -> "util"
+                "main" -> "belize"
+                "util" -> "femme"
+                "femme" -> "main"
+            }"""
+        )
+        actual = serializer.to_graphviz_dot(deps)
         self.assertEqual(expected, actual)
 
     def test_io_module(self):
@@ -103,7 +129,7 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
             "_weakref",
         ]
         # module dependencie nodes should be unique. The built-in io can lie about this
-        actual = generators.describe_module_dependencies(project)
+        actual = generators.describe_module_dependencies(project).to_dict()
         self.assertListElementsAreUnique(actual["nodes"])
         self.assertListEqual(expectedNodes, actual["nodes"])
 

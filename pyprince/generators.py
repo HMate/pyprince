@@ -2,11 +2,25 @@ from types import ModuleType
 import inspect
 from collections import defaultdict
 
-import orjson
 import libcst
 from libcst._nodes.internal import CodegenState
 
 from pyprince.parser.Project import Project
+
+
+class DependencyDescriptor:
+    def __init__(self) -> None:
+        self.nodes: list[str] = []
+        self.edges: dict[str, list[str]] = defaultdict(list)
+
+    def add_node(self, node: str):
+        self.nodes.append(node)
+
+    def add_edge(self, root: str, sub: str):
+        self.edges[root].append(sub)
+
+    def to_dict(self):
+        return {"nodes": self.nodes, "edges": dict(self.edges)}
 
 
 def render_node(node: libcst.CSTNode):
@@ -20,30 +34,16 @@ def generate_code(proj: Project) -> str:
     return root_cst.code
 
 
-def describe_module_dependencies(proj: Project):
+def describe_module_dependencies(proj: Project) -> DependencyDescriptor:
     """
     Generates a json which describes all the dependencies between modules.
     The json contains node names, and edges between nodes.
     The node names are unique.
     """
 
-    class DependencyDescriptor:
-        def __init__(self) -> None:
-            self.nodes: list[str] = []
-            self.edges: dict[str, list[str]] = defaultdict(list)
-
-        def add_node(self, node: str):
-            self.nodes.append(node)
-
-        def add_edge(self, root: str, sub: str):
-            self.edges[root].append(sub)
-
-        def to_dict(self):
-            return {"nodes": self.nodes, "edges": dict(self.edges)}
-
     result = DependencyDescriptor()
     if not proj.modules:
-        return result.to_dict()
+        return result
 
     def _recursively_enumerate_submodules(mod: ModuleType, visited: set[ModuleType]):
         if mod not in visited:
@@ -62,10 +62,12 @@ def describe_module_dependencies(proj: Project):
     visited = set()
     _recursively_enumerate_submodules(proj.modules, visited)
 
-    return result.to_dict()
+    return result
 
 
 def get_module_name(mod: ModuleType) -> str:
-    if hasattr(mod, "__spec__"):
+    if hasattr(mod, "__spec__") and mod.__spec__ is not None:
         return mod.__spec__.name
-    return mod._spec__.name
+    if hasattr(mod, "_spec__") and mod._spec__ is not None:
+        return mod._spec__.name
+    return mod.__name__

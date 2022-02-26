@@ -61,6 +61,8 @@ def _import_module(entry_file: Path, module_name: str):
         mod = importlib.import_module(module_name)
         return mod
     except Exception as e:
+        # TODO: When run with debugger, it brings in additional imports, that should not be seen.
+        # They hog down parsing + make false project nodes + fails to import some nodes: ModuleNotFoundError: No module named '<unknown>'
         print(f"Error while parse_modules for {entry_file}: {e}\n{traceback.format_exc()}")
     finally:
         sys.path = sys.path[1:]
