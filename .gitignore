@@ -5,3 +5,5 @@ __pycache__/
 
 .vscode/
 tests/test_scenarios
+build/
+npm-package/pyprince/
