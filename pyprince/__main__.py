@@ -1,3 +1,12 @@
+from os.path import dirname
+
+if dirname(dirname(__file__)) == "npm-package":
+    # When running from npm-package, we need to add the parent directory to the path
+    # So that we can import pyprince and deps from the workspace
+    import sys
+
+    sys.path.append(dirname(dirname(__file__)))
+
 from enum import Enum
 import pathlib
 import typer

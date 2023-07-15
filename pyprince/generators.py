@@ -30,6 +30,8 @@ def render_node(node: libcst.CSTNode):
 
 
 def generate_code(proj: Project) -> str:
+    # TODO: If proj.modules.__name__ does not have syntax tree, then this will fail. Happens when giving directory of this repo as start.
+    # Why does it not have syntax tree? Figure out and come up with solution
     root_cst = proj.get_syntax_tree(proj.modules.__name__)
     return root_cst.code
 

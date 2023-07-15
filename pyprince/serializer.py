@@ -1,9 +1,16 @@
 import orjson
+import traceback
 from pyprince.generators import DependencyDescriptor
 
 
 def to_json(descriptor: DependencyDescriptor) -> str:
     return orjson.dumps(descriptor.to_dict(), option=orjson.OPT_INDENT_2).decode("utf-8")
+
+
+def exception_to_json() -> str:
+    return orjson.dumps({"result": "error", "details": traceback.format_exc()}, option=orjson.OPT_INDENT_2).decode(
+        "utf-8"
+    )
 
 
 def to_graphviz_dot(descriptor: DependencyDescriptor) -> str:
