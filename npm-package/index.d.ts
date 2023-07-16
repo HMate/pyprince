@@ -1,3 +1,4 @@
-class PyPrince {
-    static callPrince(...args: string[]): string 
-};
+export class PyPrince {
+  constructor(pythonExecutablePath?: string);
+  callPrince(...args: string[]): string;
+}

@@ -1,6 +1,9 @@
-const path = require('node:path'); 
+'use strict';
 
-module.exports = class PyPrince {
+const path = require("node:path"); 
+const { execFileSync } = require("node:child_process");
+
+class PyPrince {
     // By default we use the first one on PATH. TODO: Probably this is different on linux/windows..
     static defaultPythonPath = "python";
 
@@ -9,12 +12,10 @@ module.exports = class PyPrince {
         this.pyprincePath = path.join(__dirname, "pyprince", "__main__.py");
     }
 
-    static callPrince(...args) {
-        // TODO: somehow put this whole call in a library, remove poetry dependency and hardcoded path
-        return child_process
-            .execFileSync(this.pythonExecutablePath, [this.pyprincePath, ...args])
-            .toString();
+    callPrince(...args) {
+        return execFileSync(this.pythonExecutablePath, [this.pyprincePath, ...args]).toString();
         // TODO: Check result field 
     }
-
 };
+
+module.exports = { PyPrince };
