@@ -1,17 +1,18 @@
 from os.path import dirname
 
-if dirname(dirname(__file__)) == "npm-package":
+try:
+    from pyprince import parser, generators, serializer
+except ModuleNotFoundError:
     # When running from npm-package, we need to add the parent directory to the path
     # So that we can import pyprince and deps from the workspace
     import sys
 
     sys.path.append(dirname(dirname(__file__)))
+    from pyprince import parser, generators, serializer
 
 from enum import Enum
 import pathlib
 import typer
-
-from pyprince import parser, generators, serializer
 
 
 class OutputFormat(str, Enum):
