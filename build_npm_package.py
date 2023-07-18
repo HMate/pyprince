@@ -7,6 +7,7 @@ import shutil
 import sys
 import subprocess
 
+excluded_packages = ["setuptools"]
 
 workspace_dir = Path(__file__).parent
 package_dir = workspace_dir / "npm-package" / "pyprince"
@@ -27,6 +28,10 @@ for dep_line in deps_raw:
     parts = dep_line.split(";")
     dep = parts[0].split("==")[0].replace("-", "_")
     dep_version = parts[0].split("==")[1].strip()
+
+    if dep in excluded_packages:
+        continue
+
     dep_filename = dep + ".py"
     dep_path = site_packages / dep
     if dep_path.is_dir():
@@ -51,9 +56,5 @@ for dep_line in deps_raw:
             )
         module_path = site_packages / modules[0]
         if not module_path.exists():
-            raise RuntimeError(
-                f"{dep} should be at {module_path}, but it not exists"
-            )
+            raise RuntimeError(f"{dep} should be at {module_path}, but it not exists")
         shutil.copytree(module_path, package_dir / modules[0], dirs_exist_ok=True)
-
-# TODO: We probably want to create a wheel out of these to have less files in the package

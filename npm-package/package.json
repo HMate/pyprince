@@ -4,7 +4,8 @@
     "description": "Javascript wrapper for pyprince, a full project parser for python",
     "main": "index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "build": "cd .. && poetry run build_npm_package ",
+        "prepack": "npm run build"
     },
     "repository": {
         "type": "git",
