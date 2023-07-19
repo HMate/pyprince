@@ -75,7 +75,7 @@ def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None, debug
     if visited == None:
         visited = []
 
-    # This is for debbugging, to see which on which module include path did we arrive here
+    # This is for debbugging, to see we arrived here on which module include path
     if debug_path == None:
         debug_path = []
     current_debug_path = list(debug_path)
