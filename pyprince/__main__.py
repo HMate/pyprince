@@ -1,47 +1,22 @@
 from os.path import dirname
 
 try:
-    from pyprince import parser, generators, serializer
+    from pyprince import console_entry_main
 except ModuleNotFoundError:
     # When running from npm-package, we need to add the parent directory to the path
     # So that we can import pyprince and deps from the workspace
     import sys
 
     sys.path.append(dirname(dirname(__file__)))
-    from pyprince import parser, generators, serializer
-
-from enum import Enum
-import pathlib
-import typer
+    from pyprince import console_entry_main
 
 # TODO:
+# - Either remove messages from cout, and make it proper json in every case, or do socket base communication.
 # - Implement full project parser without importing modules. Look into parso vs libcst
 # - Built npm module will be only compatible with python version it was built from.
 #   Current cause is orjson. Either remove orjson, or see how can we make it compatible with multiple versions.
 # - Add tests for the npm package for every python version.
 
 
-class OutputFormat(str, Enum):
-    json = "json"
-    dot = "dot"
-
-
-def main(
-    entrypoint: pathlib.Path,
-    draw_modules: bool = typer.Option(False, "--dm"),
-    output_format: OutputFormat = typer.Option(OutputFormat.json, "-f"),
-):
-    mod = parser.parse_project(entrypoint)
-    if draw_modules:
-        desc = generators.describe_module_dependencies(mod)
-        if output_format == OutputFormat.json:
-            result = serializer.to_json(desc)
-        else:
-            result = serializer.to_graphviz_dot(desc)
-        typer.echo(result)
-    else:
-        typer.echo(generators.generate_code(mod))
-
-
 if __name__ == "__main__":
-    typer.run(main)
+    console_entry_main()

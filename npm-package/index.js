@@ -9,7 +9,7 @@ class PyPrince {
 
     constructor(pythonExecutablePath = PyPrince.defaultPythonPath) {
         this.pythonExecutablePath = pythonExecutablePath;
-        this.pyprincePath = path.join(__dirname, "pyprince", "__main__.py");
+        this.pyprincePath = path.join(__dirname, "pyprince.pyz");
     }
 
     callPrince(...args) {
