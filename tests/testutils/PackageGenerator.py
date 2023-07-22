@@ -4,6 +4,7 @@ import shutil
 
 
 class PackageGenerator:
+    """Creates actual files on disk for testing purposes"""
     def __init__(self):
         self.files: dict[PathLike, str] = {}
 

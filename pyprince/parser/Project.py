@@ -1,18 +1,32 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from os import path
 from types import ModuleType
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 import inspect
 
 import libcst
 
 
 @dataclass
+class Module:
+    name: str
+    path: str
+    syntax_tree: Union[libcst.Module, None]
+    submodules: list[Module] = field(default_factory=list)
+
+
+@dataclass
 class Project:
     # The mapping of aliases to importLocations
-    modules: Optional[ModuleType]
+    modules: Optional[ModuleType] = None
+    root_modules: list[Module] = field(default_factory=list)
+    _module_list: list[str] = field(default_factory=list)
     _syntax_trees: dict[str, libcst.Module] = field(default_factory=dict)
+
+    def add_root_module(self, module: Module):
+        self.root_modules.append(module)
 
     def add_syntax_tree(self, module_name: str, st: libcst.Module):
         self._syntax_trees[module_name] = st

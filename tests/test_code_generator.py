@@ -9,6 +9,9 @@ from pyprince.transformators import Transformator
 from pyprince import generators
 
 
+# TODO: These are failing, but probably we will not support them anymore. They are out of scope now.
+
+
 class TestCodeGenerator(unittest.TestCase):
     def setUp(self):
         self.test_root = testutils.get_test_scenarios_dir()

@@ -4,7 +4,11 @@ __pycache__/
 *.html
 
 .vscode/
+
+# Build files
 npm-package/pyprince/
 npm-package/pyprince.pyz
 build/
+
+# Unittest generated files
 tests/test_scenarios

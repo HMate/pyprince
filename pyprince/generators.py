@@ -5,7 +5,8 @@ from collections import defaultdict
 import libcst
 from libcst._nodes.internal import CodegenState
 
-from pyprince.parser.Project import Project
+from pyprince.parser import get_module_name
+from pyprince.parser.Project import Project, Module
 
 
 class DependencyDescriptor:
@@ -30,10 +31,8 @@ def render_node(node: libcst.CSTNode):
 
 
 def generate_code(proj: Project) -> str:
-    # TODO: If proj.modules.__name__ does not have syntax tree, then this will fail. Happens when giving directory of this repo as start.
-    # Why does it not have syntax tree? Figure out and come up with solution
-    root_cst = proj.get_syntax_tree(proj.modules.__name__)
-    return root_cst.code
+    root_cst = proj.get_syntax_tree(proj.root_modules[0].name)
+    return root_cst.code if root_cst else ""
 
 
 def describe_module_dependencies(proj: Project) -> DependencyDescriptor:
@@ -42,7 +41,33 @@ def describe_module_dependencies(proj: Project) -> DependencyDescriptor:
     The json contains node names, and edges between nodes.
     The node names are unique.
     """
+    return _describe_deps(proj)
+    # return _describe_deps_from_imports(proj)
 
+
+def _describe_deps(proj: Project) -> DependencyDescriptor:
+    result = DependencyDescriptor()
+
+    def _recursively_enumerate_submodules(mod: Module, visited: set[str]):
+        if mod.name not in visited:
+            visited.add(mod.name)
+            result.add_node(mod.name)
+
+        for sub in mod.submodules:
+            if sub == mod:
+                continue
+            if sub.name not in visited:
+                _recursively_enumerate_submodules(sub, visited)
+            result.add_edge(mod.name, sub.name)
+
+    visited = set()
+    for root in proj.root_modules:
+        _recursively_enumerate_submodules(root, visited)
+
+    return result
+
+
+def _describe_deps_from_imports(proj: Project) -> DependencyDescriptor:
     result = DependencyDescriptor()
     if not proj.modules:
         return result
@@ -65,11 +90,3 @@ def describe_module_dependencies(proj: Project) -> DependencyDescriptor:
     _recursively_enumerate_submodules(proj.modules, visited)
 
     return result
-
-
-def get_module_name(mod: ModuleType) -> str:
-    if hasattr(mod, "__spec__") and mod.__spec__ is not None:
-        return mod.__spec__.name
-    if hasattr(mod, "_spec__") and mod._spec__ is not None:
-        return mod._spec__.name
-    return mod.__name__

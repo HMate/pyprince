@@ -105,30 +105,10 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
             "main",
             "io",
             "_io",
-            "_frozen_importlib",
-            "_frozen_importlib_external",
-            "_imp",
-            "nt",
-            "builtins",
-            "os",
             "abc",
             "_abc",
-            "collections.abc",
-            "ntpath",
-            "genericpath",
-            "stat",
-            "_stat",
-            "sys",
-            "site",
-            "_sitebuiltins",
-            "types",
-            "_warnings",
-            "marshal",
-            "winreg",
-            "_thread",
-            "_weakref",
         ]
-        # module dependencie nodes should be unique. The built-in io can lie about this
+        # module dependency nodes should be unique.
         actual = generators.describe_module_dependencies(project).to_dict()
         self.assertListElementsAreUnique(actual["nodes"])
         self.assertListEqual(expectedNodes, actual["nodes"])

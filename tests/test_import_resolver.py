@@ -7,6 +7,23 @@ from tests.testutils import PackageGenerator
 from pyprince.parser.Project import Project
 from pyprince.parser import parse_project
 
+# Python import possibilities:
+# import os
+# import os.path
+# from os import path
+# from os.path import join
+# from pathlib import Path
+# from pathlib import *
+# import .sub
+# import ..sub
+# import .sub.sub2
+# from . import os
+# import os as oo
+# from os import path as osp
+# from os.path import join as js
+# import os, os.path
+# import os, os.path as osp
+
 
 class TestImportResolver(unittest.TestCase):
     def setUp(self):
