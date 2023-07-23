@@ -6,7 +6,7 @@ import libcst
 from libcst._nodes.internal import CodegenState
 
 from pyprince.parser import get_module_name
-from pyprince.parser.Project import Project, Module
+from pyprince.parser import Project, Module
 
 
 class DependencyDescriptor:
