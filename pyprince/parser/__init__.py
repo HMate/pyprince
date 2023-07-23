@@ -45,64 +45,87 @@ def _parse_root_module(proj: Project, entry_file: Path, module_name: str):
     except Exception as e:
         # TODO: When run with debugger, it brings in additional imports, that should not be seen. Check if still true.
         # They hog down parsing + make false project nodes + fails to import some nodes: ModuleNotFoundError: No module named '<unknown>'
-        print(f"Error while parse_modules for {entry_file}: {e}\n{traceback.format_exc()}")
+        print(f"Error in _parse_module for {entry_file}: {e}\n{traceback.format_exc()}")
     finally:
         sys.path = sys.path[1:]
     return None
 
 
-def _parse_module(proj: Project, module_name: str, module_cache: Optional[dict[str, Module]] = None):
-    # For the root file of the project, it may not be in the sys.path, so we add it so importlib can find it
-    # print(f"Parsing module {module_name}")
-    spec = importlib.util.find_spec(module_name)
-    if spec is None or spec.origin is None:
-        raise RuntimeError("Spec is none")
+def _parse_module(
+    proj: Project, module_name: str, module_cache: Optional[dict[str, Module]] = None, import_path: Optional[str] = None
+):
     if module_cache is None:
         module_cache = {}
-    if spec.origin == "built-in":
-        root = Module(module_name, spec.origin, None)
-        module_cache[module_name] = root
-        return root
-    content = Path(spec.origin).read_text(encoding="UTF8")  # TODO: DI FileLoader
+    if import_path is None:
+        import_path = module_name
+    # print(f"Parsing module {module_name}")
+    system_modules = sys.modules
+    spec = _find_module(module_name)
+
+    if spec is None or spec.origin is None:
+        # I guess there can be multiple reasons.
+        # One reason is when the import is platform specific. For example pwd is unix only
+        mod = Module(module_name, None, None)
+        module_cache[module_name] = mod
+        return mod
+    if (
+        (spec.origin == "built-in")
+        or (spec.origin.endswith(".pyd"))
+        or (spec.origin.endswith(".pyc"))
+        or (spec.origin.endswith(".pyo"))
+    ):
+        mod = Module(module_name, spec.origin, None)
+        module_cache[module_name] = mod
+        return mod
+
+    content = Path(spec.origin).read_bytes()  # TODO: DI FileLoader
     cst: libcst.Module = libcst.parse_module(content)
-    root = Module(spec.name, spec.origin, cst)
+    mod = Module(spec.name, spec.origin, cst)
     proj.add_syntax_tree(spec.name, cst)
-    module_cache[spec.name] = root
+    module_cache[spec.name] = mod
     # go through all the import statements and parse out the modules
+    submodules = []
+    import_exprs = cstm.findall(cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
+    for import_expr in import_exprs:
+        print(cst.code_for_node(import_expr))
+        # get module name. Right now we dont use the module alias name, so we dont save it.
+        if cstm.matches(import_expr, cstm.Import()):
+            assert isinstance(import_expr, libcst.Import)
+            for alias in import_expr.names:
+                import_name = alias.evaluated_name
+                if import_name not in submodules:
+                    submodules.append(import_name)
+        if cstm.matches(import_expr, cstm.ImportFrom()):
+            assert isinstance(import_expr, libcst.ImportFrom)
+            import_name = None  # TODO: Would like to log errors
+            if isinstance(import_expr.module, libcst.Attribute):
+                import_name = cst.code_for_node(import_expr.module)
+            elif isinstance(import_expr.module, libcst.Name):
+                import_name = import_expr.module.value
+            if import_name and (import_name not in submodules):
+                submodules.append(import_name)
+    for sub in submodules:
+        if module_name == "main":
+            print("debug")
+        sub_spec = _find_module(sub)
+        if (sub_spec is not None) and (sub_spec.name in module_cache):
+            mod.submodules.append(module_cache[sub_spec.name])
+            continue
+        sub_mod = _parse_module(proj, sub, module_cache, f"{import_path} - {sub}")
+        mod.submodules.append(sub_mod)
+    return mod
+
+
+def _find_module(module_name: str):
     # TODO: Relative imports can complicate module names, we have to resolve them
     # If a module is relative, or a true child of the current module, we have to resolve its name by keeping track of the current module name
     # Maybe importlib.util.find_spec can help? It seems to rely on import for relative names, so probably not :(
-    # TODO: imports inside try-except blocks should be parsed too.
-    submodules = []
-    for child in cst.children:
-        if is_import_statement(child):
-            import_expr = cstm.findall(child, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))[0]
-            print(cst.code_for_node(import_expr))
-            # get module name. Right now we dont use the module alias name, so we dont save it.
-            if isinstance(import_expr, libcst.Import):
-                for alias in import_expr.names:
-                    module_name = alias.evaluated_name
-                    if module_name not in submodules:
-                        submodules.append(module_name)
-            if isinstance(import_expr, libcst.ImportFrom):
-                if isinstance(import_expr.module, libcst.Attribute):
-                    module_name = cst.code_for_node(import_expr.module)
-                elif isinstance(import_expr.module, libcst.Name):
-                    module_name = import_expr.module.value
-                if module_name not in submodules:
-                    submodules.append(module_name)
-    for sub in submodules:
-        sub_spec = importlib.util.find_spec(sub)
-        if (sub_spec is not None) and (sub_spec.name in module_cache):
-            root.submodules.append(module_cache[sub_spec.name])
-            continue
-        sub_mod = _parse_module(proj, sub, module_cache)
-        root.submodules.append(sub_mod)
-    return root
-
-
-def is_import_statement(node: libcst.CSTNode):
-    return cstm.matches(node, cstm.SimpleStatementLine(body=[cstm.OneOf(cstm.Import(), cstm.ImportFrom())]))
+    # see importlib.machinery.PathFinder or iterate htrough sys.meta_path?
+    try:
+        return importlib.util.find_spec(module_name)
+    except ModuleNotFoundError:
+        # For example this error happens for org.python.core in pickle.py
+        return None
 
 
 def parse_project_by_imports(entry_file: Path) -> Project:

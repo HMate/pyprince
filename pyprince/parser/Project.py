@@ -12,8 +12,8 @@ import libcst
 @dataclass
 class Module:
     name: str
-    path: str
-    syntax_tree: Union[libcst.Module, None]
+    path: Union[str, None]  # None means we dont know the physical location of the module
+    syntax_tree: Union[libcst.Module, None]  # None means the module could not be parsed
     submodules: list[Module] = field(default_factory=list)
 
 

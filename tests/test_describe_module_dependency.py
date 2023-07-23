@@ -88,6 +88,9 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         self.assertEqual(expected, actual)
 
     def test_io_module(self):
+        """io modue has built-in dependencies on _io, _abc and import inside try-catch blocks
+        We check if the parser gathers these correctly.
+        """
         test_name = Path(self._testMethodName)
         gen = PackageGenerator()
         gen.add_file(
@@ -112,5 +115,28 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         actual = generators.describe_module_dependencies(project).to_dict()
         self.assertListElementsAreUnique(actual["nodes"])
         self.assertListEqual(expectedNodes, actual["nodes"])
+
+    def test_argparse_module(self):
+        """argparse module has 2 interesting scenarios:
+        - dependecies on pyd modules (unicodedata.pyd)
+        - uses the pwd module which is unix only
+        We dont parse the code for these but we should still register the modules.
+        """
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import argparse
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py")
+        expectedNodes = ["main", "argparse", "unicodedata", "pwd"]
+        actual = generators.describe_module_dependencies(project).to_dict()
+        self.assertContains(actual["nodes"], expectedNodes)
 
     # TODO: Additional test case: create 2 submodules with the same name, see if node names are unique

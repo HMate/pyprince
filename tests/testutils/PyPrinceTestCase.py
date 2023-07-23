@@ -1,3 +1,4 @@
+import collections.abc
 import unittest
 
 
@@ -21,4 +22,19 @@ class PyPrinceTestCase(unittest.TestCase):
 
         elemCount = ", ".join([f"{repr(elem)}({counter[elem]} times)" for elem in duplicates])
         standardMsg = f"These element can be found multiple times: {elemCount}"
+        self.fail(self._formatMessage(msg, standardMsg))
+
+    def assertContains(self, container: collections.abc.Collection, members: collections.abc.Collection, msg=None):
+        missing = set()
+        for member in members:
+            if member not in container:
+                missing.add(member)
+
+        if len(missing) == 0:
+            # success
+            return
+
+        standardMsg = (
+            f"These members are missing from container: {repr(missing)}\noriginal container: {repr(container)}"
+        )
         self.fail(self._formatMessage(msg, standardMsg))
