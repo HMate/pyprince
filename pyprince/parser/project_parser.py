@@ -62,7 +62,7 @@ def _parse_module(
         module_cache[module_name] = mod
         return mod
     if (
-        (spec.origin == "built-in")
+        (spec.origin in ["built-in", "frozen"])
         or (spec.origin.endswith(".pyd"))
         or (spec.origin.endswith(".pyc"))
         or (spec.origin.endswith(".pyo"))
@@ -76,27 +76,7 @@ def _parse_module(
     mod = Module(spec.name, spec.origin, cst)
     proj.add_syntax_tree(spec.name, cst)
     module_cache[spec.name] = mod
-    # go through all the import statements and parse out the modules
-    submodules = []
-    import_exprs = cstm.findall(cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
-    for import_expr in import_exprs:
-        logger.log(cst.code_for_node(import_expr))
-        # get module name. Right now we dont use the module alias name, so we dont save it.
-        if cstm.matches(import_expr, cstm.Import()):
-            assert isinstance(import_expr, libcst.Import)
-            for alias in import_expr.names:
-                import_name = alias.evaluated_name
-                if import_name not in submodules:
-                    submodules.append(import_name)
-        if cstm.matches(import_expr, cstm.ImportFrom()):
-            assert isinstance(import_expr, libcst.ImportFrom)
-            import_name = None  # TODO: Would like to log errors
-            if isinstance(import_expr.module, libcst.Attribute):
-                import_name = cst.code_for_node(import_expr.module)
-            elif isinstance(import_expr.module, libcst.Name):
-                import_name = import_expr.module.value
-            if import_name and (import_name not in submodules):
-                submodules.append(import_name)
+    submodules = _extract_module_import_names(cst)
     for sub in submodules:
         sub_spec = _find_module(sub)
         if (sub_spec is not None) and (sub_spec.name in module_cache):
@@ -117,3 +97,27 @@ def _find_module(module_name: str):
     except ModuleNotFoundError:
         # For example this error happens for org.python.core in pickle.py
         return None
+
+def _extract_module_import_names(root_cst: libcst.Module):
+    # go through all the import statements and parse out the modules
+    submodules = []
+    import_exprs = cstm.findall(root_cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
+    for import_expr in import_exprs:
+        logger.log(root_cst.code_for_node(import_expr))
+        # get module name. Right now we dont use the module alias name, so we dont save it.
+        if cstm.matches(import_expr, cstm.Import()):
+            assert isinstance(import_expr, libcst.Import)
+            for alias in import_expr.names:
+                import_name = alias.evaluated_name
+                if import_name not in submodules:
+                    submodules.append(import_name)
+        if cstm.matches(import_expr, cstm.ImportFrom()):
+            assert isinstance(import_expr, libcst.ImportFrom)
+            import_name = None  # TODO: Would like to log errors
+            if isinstance(import_expr.module, libcst.Attribute):
+                import_name = root_cst.code_for_node(import_expr.module)
+            elif isinstance(import_expr.module, libcst.Name):
+                import_name = import_expr.module.value
+            if import_name and (import_name not in submodules):
+                submodules.append(import_name)
+    return submodules
