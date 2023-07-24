@@ -51,7 +51,7 @@ def _parse_module(
         module_cache = {}
     if import_path is None:
         import_path = module_name
-    # print(f"Parsing module {module_name}")
+    print(f"Parsing module {module_name}")
     system_modules = sys.modules
     spec = _find_module(module_name)
 
@@ -94,16 +94,18 @@ def _find_module(module_name: str):
     # see importlib.machinery.PathFinder or iterate htrough sys.meta_path?
     try:
         return importlib.util.find_spec(module_name)
-    except ModuleNotFoundError:
-        # For example this error happens for org.python.core in pickle.py
+    except (ModuleNotFoundError, ValueError):
+        # ModuleNotFoundError happens for org.python.core in pickle.py
+        # ValueError happens for builtins, because it does not have a spec
         return None
+
 
 def _extract_module_import_names(root_cst: libcst.Module):
     # go through all the import statements and parse out the modules
     submodules = []
     import_exprs = cstm.findall(root_cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
     for import_expr in import_exprs:
-        logger.log(root_cst.code_for_node(import_expr))
+        logger.log(f"- {root_cst.code_for_node(import_expr)}")
         # get module name. Right now we dont use the module alias name, so we dont save it.
         if cstm.matches(import_expr, cstm.Import()):
             assert isinstance(import_expr, libcst.Import)
