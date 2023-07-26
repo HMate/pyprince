@@ -2,9 +2,6 @@ from types import ModuleType
 import inspect
 from collections import defaultdict
 
-import libcst
-from libcst._nodes.internal import CodegenState
-
 from pyprince.parser import get_module_name
 from pyprince.parser import Project, Module
 
@@ -22,12 +19,6 @@ class DependencyDescriptor:
 
     def to_dict(self):
         return {"nodes": self.nodes, "edges": dict(self.edges)}
-
-
-def render_node(node: libcst.CSTNode):
-    state = CodegenState(" " * 4, "\n")
-    node._codegen(state)
-    return "".join(state.tokens)
 
 
 def generate_code(proj: Project) -> str:
