@@ -1,6 +1,6 @@
 {
     "name": "@mhidvegi/pyprince",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Javascript wrapper for pyprince, a full project parser for python",
     "main": "index.js",
     "scripts": {
