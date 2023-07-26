@@ -54,6 +54,8 @@ def _parse_module(proj: Project, module_name: str) -> Module:
 
 
 def _parse_module_unchecked(proj: Project, module_name: str) -> Module:
+    # TODO(0.0.3): Use normal logging for these - see loguru
+    print(f"Parsing module {module_name}")
     spec = _find_module(module_name)
 
     if spec is None or spec.origin is None:
@@ -110,7 +112,9 @@ def _extract_module_import_names(root_cst: libcst.Module):
     submodules: list[str] = []
     import_exprs = cstm.findall(root_cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
     for import_expr in import_exprs:
+        logger.log(f"- {root_cst.code_for_node(import_expr)}")
         # get module name. Right now we dont use the module alias name, so we dont save it.
+        # TODO(0.0.3): Lets handle full import names - see modules like __main__, _bootstrap in different subfolders.
         if cstm.matches(import_expr, cstm.Import()):
             assert isinstance(import_expr, libcst.Import)
             for alias in import_expr.names:
@@ -119,7 +123,7 @@ def _extract_module_import_names(root_cst: libcst.Module):
                     submodules.append(import_name)
         if cstm.matches(import_expr, cstm.ImportFrom()):
             assert isinstance(import_expr, libcst.ImportFrom)
-            import_name = None  # TODO: Would like to log errors
+            import_name = None  # TODO(0.0.3): Would like to log errors
             if isinstance(import_expr.module, libcst.Attribute):
                 import_name = root_cst.code_for_node(import_expr.module)
             elif isinstance(import_expr.module, libcst.Name):
