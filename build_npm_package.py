@@ -12,4 +12,5 @@ package_dir = workspace_dir / "npm-package"
 
 # Copy pyprince code
 executable = workspace_dir / "build" / "pyprince.pyz"
+print(f"Copying {executable} to {package_dir}")
 shutil.copy2(executable, package_dir)
