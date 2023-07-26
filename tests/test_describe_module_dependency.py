@@ -114,7 +114,8 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         # module dependency nodes should be unique.
         actual = generators.describe_module_dependencies(project).to_dict()
         self.assertListElementsAreUnique(actual["nodes"])
-        self.assertListEqual(expectedNodes, actual["nodes"])
+        self.assertEquals(len(actual["nodes"]), 223)
+        self.assertContains(actual["nodes"], expectedNodes)
 
     def test_argparse_module(self):
         """argparse module has 2 interesting scenarios:

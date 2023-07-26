@@ -71,11 +71,20 @@ def _parse_module(
         module_cache[module_name] = mod
         return mod
 
+    if module_name == "pydoc_data.topics":
+        # TODO: Right now libcst crashes on this file when parsing or when enumerating imports.
+        # For now it does not affect us if we just skip the file.
+        # In the future we may want to switch to parso/ast module, or hope it gets fixed.
+        mod = Module(module_name, spec.origin, None)
+        module_cache[module_name] = mod
+        return mod
+
     content = Path(spec.origin).read_bytes()  # TODO: DI FileLoader
     cst: libcst.Module = libcst.parse_module(content)
     mod = Module(spec.name, spec.origin, cst)
     proj.add_syntax_tree(spec.name, cst)
     module_cache[spec.name] = mod
+
     submodules = _extract_module_import_names(cst)
     for sub in submodules:
         sub_spec = _find_module(sub)
@@ -102,7 +111,7 @@ def _find_module(module_name: str):
 
 def _extract_module_import_names(root_cst: libcst.Module):
     # go through all the import statements and parse out the modules
-    submodules = []
+    submodules: list[str] = []
     import_exprs = cstm.findall(root_cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
     for import_expr in import_exprs:
         logger.log(f"- {root_cst.code_for_node(import_expr)}")
