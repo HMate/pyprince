@@ -1,5 +1,6 @@
 import traceback
 import sys
+import os
 from pathlib import Path
 from typing import Optional
 import importlib, importlib.util
@@ -12,54 +13,54 @@ import pyprince.logger as logger
 
 
 def parse_project_new(entry_file: Path) -> Project:
-    proj = Project()
-    root = _parse_modules_recursively(proj, entry_file)
-    if root is not None:
-        proj.add_root_module(root)
+    # We need to set this, because native parser can segfault without throwing an exception
+    # See: https://github.com/Instagram/LibCST/issues/980
+    os.environ["LIBCST_PARSER_TYPE"] = "pure"
 
+    proj = Project()
+    # For the root file of the project, it may not be in the sys.path, so we add it so importlib can find it
+    sys.path = [str(entry_file.parent)] + sys.path
+    root_name = entry_file.stem
+    root = _parse_module(proj, root_name)
+    if root is None:
+        sys.path = sys.path[1:]
+        return proj
+
+    proj.add_root_module(root.name)
+    proj.add_module(root)
+
+    remaining_modules = set(root.submodules)
+
+    while len(remaining_modules) > 0:
+        next_module: str = remaining_modules.pop()
+        mod = _parse_module(proj, next_module)
+        if mod is None:
+            continue
+        proj.add_module(mod)
+        for sub in mod.submodules:
+            if not proj.has_module(sub):
+                remaining_modules.add(sub)
+    sys.path = sys.path[1:]
     return proj
 
 
-def _parse_modules_recursively(proj: Project, entry_file: Path) -> Optional[Module]:
-    """
-    Recursively gathers all imported and defined modules and contained declarations.
-    """
-    module_name = entry_file.stem
-    mod = _parse_root_module(proj, entry_file, module_name)
+def _parse_module(proj: Project, module_name: str) -> Module:
+    try:
+        return _parse_module_unchecked(proj, module_name)
+    except Exception as e:
+        logger.log(f"Error in _parse_module for module {module_name}: {e}\n{traceback.format_exc()}")
+    mod = Module(module_name, None, None)
     return mod
 
 
-def _parse_root_module(proj: Project, entry_file: Path, module_name: str):
-    # For the root file of the project, it may not be in the sys.path, so we add it so importlib can find it
-    sys.path = [str(entry_file.parent)] + sys.path
-    try:
-        root = _parse_module(proj, module_name)
-        return root
-    except Exception as e:
-        # TODO: When run with debugger, it brings in additional imports, that should not be seen. Check if still true.
-        # They hog down parsing + make false project nodes + fails to import some nodes: ModuleNotFoundError: No module named '<unknown>'
-        logger.log(f"Error in _parse_module for {entry_file}: {e}\n{traceback.format_exc()}")
-    finally:
-        sys.path = sys.path[1:]
-    return None
-
-
-def _parse_module(
-    proj: Project, module_name: str, module_cache: Optional[dict[str, Module]] = None, import_path: Optional[str] = None
-):
-    if module_cache is None:
-        module_cache = {}
-    if import_path is None:
-        import_path = module_name
+def _parse_module_unchecked(proj: Project, module_name: str) -> Module:
     print(f"Parsing module {module_name}")
-    system_modules = sys.modules
     spec = _find_module(module_name)
 
     if spec is None or spec.origin is None:
         # I guess there can be multiple reasons.
         # One reason is when the import is platform specific. For example pwd is unix only
         mod = Module(module_name, None, None)
-        module_cache[module_name] = mod
         return mod
     if (
         (spec.origin in ["built-in", "frozen"])
@@ -68,7 +69,6 @@ def _parse_module(
         or (spec.origin.endswith(".pyo"))
     ):
         mod = Module(module_name, spec.origin, None)
-        module_cache[module_name] = mod
         return mod
 
     if module_name == "pydoc_data.topics":
@@ -76,23 +76,20 @@ def _parse_module(
         # For now it does not affect us if we just skip the file.
         # In the future we may want to switch to parso/ast module, or hope it gets fixed.
         mod = Module(module_name, spec.origin, None)
-        module_cache[module_name] = mod
         return mod
 
     content = Path(spec.origin).read_bytes()  # TODO: DI FileLoader
     cst: libcst.Module = libcst.parse_module(content)
     mod = Module(spec.name, spec.origin, cst)
     proj.add_syntax_tree(spec.name, cst)
-    module_cache[spec.name] = mod
 
     submodules = _extract_module_import_names(cst)
     for sub in submodules:
         sub_spec = _find_module(sub)
-        if (sub_spec is not None) and (sub_spec.name in module_cache):
-            mod.submodules.append(module_cache[sub_spec.name])
+        if sub_spec is not None:
+            mod.submodules.append(sub_spec.name)
             continue
-        sub_mod = _parse_module(proj, sub, module_cache, f"{import_path} - {sub}")
-        mod.submodules.append(sub_mod)
+        mod.submodules.append(sub)
     return mod
 
 

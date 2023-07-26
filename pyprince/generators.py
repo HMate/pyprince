@@ -31,7 +31,7 @@ def render_node(node: libcst.CSTNode):
 
 
 def generate_code(proj: Project) -> str:
-    root_cst = proj.get_syntax_tree(proj.root_modules[0].name)
+    root_cst = proj.get_syntax_tree(proj.get_root_modules()[0])
     return root_cst.code if root_cst else ""
 
 
@@ -48,28 +48,21 @@ def describe_module_dependencies(proj: Project) -> DependencyDescriptor:
 def _describe_deps(proj: Project) -> DependencyDescriptor:
     result = DependencyDescriptor()
 
-    def _recursively_enumerate_submodules(mod: Module, visited: set[str]):
-        if mod.name not in visited:
-            visited.add(mod.name)
-            result.add_node(mod.name)
-
+    for module_name in proj.get_modules():
+        result.add_node(module_name)
+        mod = proj.get_module(module_name)
+        if mod is None:
+            continue
         for sub in mod.submodules:
-            if sub == mod:
-                continue
-            if sub.name not in visited:
-                _recursively_enumerate_submodules(sub, visited)
-            result.add_edge(mod.name, sub.name)
-
-    visited = set()
-    for root in proj.root_modules:
-        _recursively_enumerate_submodules(root, visited)
+            result.add_edge(mod.name, sub)
 
     return result
 
 
 def _describe_deps_from_imports(proj: Project) -> DependencyDescriptor:
     result = DependencyDescriptor()
-    if not proj.modules:
+    modules = proj.get_loaded_modules()
+    if not modules:
         return result
 
     def _recursively_enumerate_submodules(mod: ModuleType, visited: set[ModuleType]):
@@ -87,6 +80,6 @@ def _describe_deps_from_imports(proj: Project) -> DependencyDescriptor:
             result.add_edge(get_module_name(mod), get_module_name(sub))
 
     visited = set()
-    _recursively_enumerate_submodules(proj.modules, visited)
+    _recursively_enumerate_submodules(modules, visited)
 
     return result

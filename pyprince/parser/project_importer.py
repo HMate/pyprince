@@ -15,9 +15,9 @@ import pyprince.logger as logger
 def parse_project_by_imports(entry_file: Path) -> Project:
     modules = import_modules_recursively(entry_file)
 
-    proj = Project(modules)
+    proj = Project().set_loaded_modules_root(modules)
 
-    for mod in proj.iter_modules():
+    for mod in proj.iter_loaded_modules():
         # TODO: __path__ checking conflicts with unittests for code inject and import resolve,
         #  because most normal modules do not have path. Experiment why is this check needed.
         # if not hasattr(mod, "__path__"):

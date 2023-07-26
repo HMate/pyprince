@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from os import path
 from types import ModuleType
 from typing import Iterable, Optional, Union
 import inspect
@@ -14,19 +13,34 @@ class Module:
     name: str
     path: Union[str, None]  # None means we dont know the physical location of the module
     syntax_tree: Union[libcst.Module, None]  # None means the module could not be parsed
-    submodules: list[Module] = field(default_factory=list)
+    submodules: list[str] = field(default_factory=list)
 
 
 @dataclass
 class Project:
     # The mapping of aliases to importLocations
-    modules: Optional[ModuleType] = None
-    root_modules: list[Module] = field(default_factory=list)
-    _module_list: list[str] = field(default_factory=list)
+    _loaded_modules: Optional[ModuleType] = None
+    _root_modules: list[str] = field(default_factory=list)
+    _modules: dict[str, Module] = field(default_factory=dict)
     _syntax_trees: dict[str, libcst.Module] = field(default_factory=dict)
 
-    def add_root_module(self, module: Module):
-        self.root_modules.append(module)
+    def add_root_module(self, module_name: str):
+        self._root_modules.append(module_name)
+
+    def get_root_modules(self) -> list[str]:
+        return self._root_modules
+
+    def add_module(self, module: Module):
+        self._modules[module.name] = module
+
+    def has_module(self, module_name: str) -> bool:
+        return module_name in self._modules
+
+    def get_module(self, module_name: str) -> Optional[Module]:
+        return self._modules.get(module_name, None)
+
+    def get_modules(self):
+        return self._modules.keys()
 
     def add_syntax_tree(self, module_name: str, st: libcst.Module):
         self._syntax_trees[module_name] = st
@@ -36,16 +50,23 @@ class Project:
             return None
         return self._syntax_trees[module_name]
 
+    def set_loaded_modules_root(self, module: Optional[ModuleType]):
+        self._loaded_modules = module
+        return self
+
+    def get_loaded_modules(self) -> Optional[ModuleType]:
+        return self._loaded_modules
+
     def clone(self) -> Project:
-        cl = Project(self.modules)
+        cl = Project().set_loaded_modules_root(self._loaded_modules)
         cl._syntax_trees = self._syntax_trees.copy()
         return cl
 
-    def iter_modules(self) -> Iterable[ModuleType]:
-        if not self.modules:
+    def iter_loaded_modules(self) -> Iterable[ModuleType]:
+        if not self._loaded_modules:
             return
         visited = []
-        yield from self._recursively_enumerate_submodules(self.modules, visited)
+        yield from self._recursively_enumerate_submodules(self._loaded_modules, visited)
 
     def _recursively_enumerate_submodules(self, mod: ModuleType, visited: list[ModuleType]) -> Iterable[ModuleType]:
         visited.append(mod)
@@ -69,7 +90,7 @@ class Project:
             return None
 
     def find_module_for_function(self, func_name: str) -> tuple[Optional[str], Optional[libcst.Module]]:
-        functions: list[tuple[str, function]] = inspect.getmembers(self.modules, inspect.isfunction)
+        functions: list[tuple[str, function]] = inspect.getmembers(self._loaded_modules, inspect.isfunction)
         for name, func in functions:
             if name == func_name:
                 return func.__module__, self.get_syntax_tree(func.__module__)
