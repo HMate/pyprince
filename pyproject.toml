@@ -12,6 +12,7 @@ python = "^3.9"
 libcst = "^1.0.1"
 typer = "^0.3.2"
 fs = "^2.4.13"
+loguru = "^0.7.0"
 
 [tool.poetry.group.dev.dependencies]
 black = { version = "^20.8b1", allow-prereleases = true }

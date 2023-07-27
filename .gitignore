@@ -12,3 +12,6 @@ build/
 
 # Unittest generated files
 tests/test_scenarios
+
+# logs
+pyprince*.log

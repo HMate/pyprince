@@ -9,7 +9,7 @@ import libcst
 import libcst.matchers as cstm
 
 from pyprince.parser.Project import Project, Module
-import pyprince.logger as logger
+from pyprince.logger import logger
 
 
 def parse_project_new(entry_file: Path) -> Project:
@@ -48,14 +48,13 @@ def _parse_module(proj: Project, module_name: str) -> Module:
     try:
         return _parse_module_unchecked(proj, module_name)
     except Exception as e:
-        logger.log(f"Error in _parse_module for module {module_name}: {e}\n{traceback.format_exc()}")
+        logger.exception(f"Error in _parse_module for module {module_name}")
     mod = Module(module_name, None, None)
     return mod
 
 
 def _parse_module_unchecked(proj: Project, module_name: str) -> Module:
-    # TODO(0.0.3): Use normal logging for these - see loguru
-    print(f"Parsing module {module_name}")
+    logger.debug(f"Parsing module {module_name}")
     spec = _find_module(module_name)
 
     if spec is None or spec.origin is None:
@@ -104,6 +103,7 @@ def _find_module(module_name: str):
     except (ModuleNotFoundError, ValueError):
         # ModuleNotFoundError happens for org.python.core in pickle.py
         # ValueError happens for builtins, because it does not have a spec
+        logger.debug(f"Could not find module {module_name}")
         return None
 
 
@@ -112,7 +112,7 @@ def _extract_module_import_names(root_cst: libcst.Module):
     submodules: list[str] = []
     import_exprs = cstm.findall(root_cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
     for import_expr in import_exprs:
-        logger.log(f"- {root_cst.code_for_node(import_expr)}")
+        logger.debug(f"- {root_cst.code_for_node(import_expr)}")
         # get module name. Right now we dont use the module alias name, so we dont save it.
         # TODO(0.0.3): Lets handle full import names - see modules like __main__, _bootstrap in different subfolders.
         if cstm.matches(import_expr, cstm.Import()):
@@ -128,6 +128,8 @@ def _extract_module_import_names(root_cst: libcst.Module):
                 import_name = root_cst.code_for_node(import_expr.module)
             elif isinstance(import_expr.module, libcst.Name):
                 import_name = import_expr.module.value
+            else:
+                logger.warning(f"Could not find import name - {import_expr}")
             if import_name and (import_name not in submodules):
                 submodules.append(import_name)
     return submodules

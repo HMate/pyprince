@@ -8,7 +8,7 @@ except ModuleNotFoundError:
     import sys
 
     sys.path.append(dirname(dirname(__file__)))
-    from pyprince import parser, generators, serializer
+    from pyprince import parser, generators, serializer, logger
 
 from enum import Enum
 import pathlib
@@ -29,6 +29,9 @@ def main(
     draw_modules: bool = typer.Option(False, "--dm"),
     output_format: OutputFormat = typer.Option(OutputFormat.json, "-f"),
 ):
+    logger.init()
+    logger.logger.info(f"Starting pyprince at {pathlib.Path().absolute()}")
+
     mod = parser.parse_project(entrypoint)
     if draw_modules:
         desc = generators.describe_module_dependencies(mod)
