@@ -3,12 +3,12 @@ from pathlib import Path
 import textwrap
 
 import tests.testutils as testutils
-from tests.testutils import PackageGenerator
+from tests.testutils import PackageGenerator, PyPrinceTestCase
 from pyprince.parser import parse_project, Project
 from pyprince import generators
 
 
-class TestCodeGenerator(unittest.TestCase):
+class TestCodeGenerator(PyPrinceTestCase):
     def setUp(self):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()

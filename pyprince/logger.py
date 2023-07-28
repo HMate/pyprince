@@ -23,7 +23,7 @@ def init():
             return True
         return False
 
-    logpath = pathlib.Path().home() / ".pyprince" / "pyprince.log"
+    logpath = get_log_folder() / "pyprince.log"
 
     logger.remove()
     logger.add(
@@ -34,3 +34,7 @@ def init():
         enqueue=True,
         rotation=should_rotate_log,
     )
+
+
+def get_log_folder() -> pathlib.Path:
+    return pathlib.Path().home() / ".pyprince"

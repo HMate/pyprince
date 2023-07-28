@@ -1,9 +1,15 @@
 import collections.abc
 import unittest
 
+from pyprince.logger import logger, get_log_folder
+
 
 class PyPrinceTestCase(unittest.TestCase):
     """Contains additional asserts for usage in pyprince tests"""
+
+    def __init__(self, methodName="runTest"):
+        super().__init__(methodName)
+        logger.add(get_log_folder() / "pyprince_test.log", level="DEBUG", diagnose=True, retention=10, rotation="00:00")
 
     def assertListElementsAreUnique(self, container: list, msg=None):
         uniques = set(container)

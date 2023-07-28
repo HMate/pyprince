@@ -13,6 +13,7 @@ from pyprince.logger import logger
 
 
 def parse_project_new(entry_file: Path) -> Project:
+    logger.info(f"Parsing started from {entry_file.absolute()}")
     # We need to set this, because native parser can segfault without throwing an exception
     # See: https://github.com/Instagram/LibCST/issues/980
     os.environ["LIBCST_PARSER_TYPE"] = "pure"
@@ -41,6 +42,7 @@ def parse_project_new(entry_file: Path) -> Project:
             if not proj.has_module(sub):
                 remaining_modules.add(sub)
     sys.path = sys.path[1:]
+    logger.success(f"Parsing finished for {entry_file.absolute()}")
     return proj
 
 

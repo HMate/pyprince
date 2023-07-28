@@ -3,7 +3,7 @@ import textwrap
 from pathlib import Path
 
 from tests import testutils
-from tests.testutils import PackageGenerator
+from tests.testutils import PackageGenerator, PyPrinceTestCase
 from pyprince.parser.Project import Project
 from pyprince.parser import parse_project
 
@@ -25,7 +25,7 @@ from pyprince.parser import parse_project
 # import os, os.path as osp
 
 
-class TestImportResolver(unittest.TestCase):
+class TestImportResolver(PyPrinceTestCase):
     def setUp(self):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()
