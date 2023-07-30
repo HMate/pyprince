@@ -16,7 +16,7 @@ def parse_project_new(entry_file: Path) -> Project:
     logger.info(f"Parsing started from {entry_file.absolute()}")
     # We need to set this, because native parser can segfault without throwing an exception
     # See: https://github.com/Instagram/LibCST/issues/980
-    os.environ["LIBCST_PARSER_TYPE"] = "pure"
+    # os.environ["LIBCST_PARSER_TYPE"] = "pure"
 
     proj = Project()
     # For the root file of the project, it may not be in the sys.path, so we add it so importlib can find it
@@ -124,8 +124,14 @@ def _extract_module_import_names(root_cst: libcst.Module):
                 if import_name not in submodules:
                     submodules.append(import_name)
         if cstm.matches(import_expr, cstm.ImportFrom()):
+            # cases:
+            # If module is None and relative is none, that cannot happen. -> log error
+            # - from . or ..  -> module is None, and relative is not empty
+            # - from .foo -> module is a Name and relative is not empty
+            # - from foo -> module is a Name and relative is empty
+            # - from foo.bar -> module is an Attribute and relative is empty
             assert isinstance(import_expr, libcst.ImportFrom)
-            import_name = None  # TODO(0.0.3): Would like to log errors
+            import_name = None
             if isinstance(import_expr.module, libcst.Attribute):
                 import_name = root_cst.code_for_node(import_expr.module)
             elif isinstance(import_expr.module, libcst.Name):

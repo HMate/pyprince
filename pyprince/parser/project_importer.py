@@ -9,7 +9,7 @@ import importlib, importlib.util
 import libcst
 
 from pyprince.parser.Project import Project
-import pyprince.logger as logger
+from pyprince.logger import logger
 
 
 def parse_project_by_imports(entry_file: Path) -> Project:
@@ -29,10 +29,10 @@ def parse_project_by_imports(entry_file: Path) -> Project:
         if mod.__file__ is None:
             continue  # This case if entry_file is a directory
         if mod.__file__.endswith(".pyd"):
-            logger.log(f"Skipping syntax tree of {mod.__name__}, it is .pyd file")
+            logger.info(f"Skipping syntax tree of {mod.__name__}, it is .pyd file")
             continue  # Module is in binary form, we dont have the source
         if mod.__file__.endswith(".so"):
-            logger.log(f"Skipping syntax tree of {mod.__name__}, it is .so file")
+            logger.info(f"Skipping syntax tree of {mod.__name__}, it is .so file")
             continue  # Module is in binary form, we dont have the source
         module_path = Path(mod.__file__)
         content = module_path.read_text(encoding="UTF8")

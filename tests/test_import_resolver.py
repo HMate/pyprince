@@ -95,6 +95,40 @@ class TestImportResolver(PyPrinceTestCase):
         self.assertIsNotNone(project.get_syntax_tree("utils"))
         self.assertIsNotNone(project.get_syntax_tree("other"))
 
+    def test_hiding_toplevel_import(self):
+        # Test importing a package that exist in the stdlib as a subdirectory from the entrypoint works.
+        # It should shadow the builtin logging module.
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import logging
+
+                logging.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "logging" / "__init__.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self.assertEquals(project.get_module("logging").path, self.test_root / test_name / "logging/__init__.py")
+
+    def test_relative_import(self):
+        # Test relative import from package
+        pass
+
     # TODO: test relative imports in subpackage
     # TODO: test start imports
 
