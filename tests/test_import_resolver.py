@@ -123,7 +123,9 @@ class TestImportResolver(PyPrinceTestCase):
 
         test_main = self.test_root / test_name / "main.py"
         project: Project = parse_project(test_main)
-        self.assertEquals(project.get_module("logging").path, self.test_root / test_name / "logging/__init__.py")
+        log_module = project.get_module("logging")
+        assert log_module is not None and log_module.path is not None
+        self.assertEqual(Path(log_module.path), self.test_root / test_name / "logging/__init__.py")
 
     def test_relative_import(self):
         # Test relative import from package

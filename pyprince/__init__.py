@@ -4,7 +4,7 @@ import pathlib
 
 import typer
 
-from pyprince import parser, generators, serializer
+from pyprince import parser, generators, serializer, logger
 
 
 class OutputFormat(str, Enum):

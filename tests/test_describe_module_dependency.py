@@ -104,18 +104,35 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         project: Project = parse_project(self.test_root / test_name / "main.py")
+        # fmt: off
         expectedNodes = [
-            "main",
-            "io",
-            "_io",
-            "abc",
-            "_abc",
+            "main", "io", "abc", "_py_abc", "_abc", "_io", "_weakrefset", "types", 
+            "sys", "functools", "_weakref", "typing", "contextlib", "_collections_abc", "collections", "reprlib", "operator", 
+            "copy", "re", "enum", "sre_constants", "_operator", "builtins", "_locale", "warnings", "heapq", "copyreg", "itertools", "collections.abc", 
+            "keyword", "weakref", "_warnings", "_functools", "traceback", "_collections", "tracemalloc", "org.python.core", "_heapq", "_thread", 
+            "sre_compile", "sre_parse", "_sre", "gc", "atexit", "fnmatch", "pickle", "ntpath", "linecache", "unicodedata", "pprint", "struct", "_struct", 
+            "time", "_pickle", "_compat_pickle", "genericpath", "posixpath", "tokenize", "stat", "doctest", "os", "nt", "_tracemalloc", "inspect", "argparse", 
+            "codecs", "unittest", "runner", "async_case", "encodings", "textwrap", "_winapi", "dis", "posix", "suite", "signals", "_codecs", "importlib.machinery", 
+            "_imp", "gettext", "string", "subprocess", "loader", "result", "opcode", "_bootstrap_external", "case", "__future__", "shutil", "_stat", "_string", 
+            "token", "pwd", "encodings.mbcs", "importlib", "ast", "signal", "_opcode", "pdb", "grp", "zipfile", "difflib", "locale", "_bootstrap", "_ast", 
+            "_bootlocale", "tarfile", "bdb", "binascii", "importlib.util", "errno", "msvcrt", "selectors", "lzma", "code", "codeop", "threading", "runpy", 
+            "readline", "_lzma", "getopt", "bz2", "zlib", "_posixsubprocess", "pkgutil", "select", "gzip", "_threading_local", "glob", "pydoc", "_signal", 
+            "platform", "__main__", "plistlib", "math", "pydoc_data.topics", "webbrowser", "_frozen_importlib", "zipimport", "shlex", "_bz2", "tempfile", 
+            "cmd", "_frozen_importlib_external", "email.message", "urllib.parse", "random", "vms_lib", "hashlib", "uu", "_sha3", "py_compile", "_md5", 
+            "encodings.aliases", "_sha1", "_hashlib", "_sha256", "http.server", "optparse", "_random", "_blake2", "sysconfig", "email.iterators", 
+            "mimetypes", "_osx_support", "_compression", "email.policy", "_aix_support", "quopri", "email.utils", "winreg", "socketserver", "socket", 
+            "marshal", "datetime", "email", "email._policybase", "java.lang", "statistics", "email.contentmanager", "_statistics", "_socket", 
+            "email.generator", "_sha512", "_datetime", "tty", "_winreg", "email.headerregistry", "email._encoded_words", "_strptime", "distutils", 
+            "xml.parsers.expat", "base64", "fractions", "pyexpat", "http", "logging", "numbers", "termios", "calendar", "html", "http.client", 
+            "_bootsubprocess", "decimal", "array", "email.parser", "ssl", "email.errors", "email.charset", "email._parseaddr", "bisect", "_bisect", 
+            "email.feedparser", "html.entities", "email.encoders", "email.quoprimime", "_decimal", "_ssl", "_pydecimal", "email.base64mime", "contextvars", "_contextvars"
         ]
+        # fmt: on
         # module dependency nodes should be unique.
         actual = generators.describe_module_dependencies(project).to_dict()
         self.assertListElementsAreUnique(actual["nodes"])
-        self.assertEqual(len(actual["nodes"]), 222)
-        self.assertContains(actual["nodes"], expectedNodes)
+        self.maxDiff = None
+        self.assertCountEqual(actual["nodes"], expectedNodes)
 
     def test_argparse_module(self):
         """argparse module has 2 interesting scenarios:

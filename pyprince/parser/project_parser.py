@@ -8,6 +8,7 @@ import importlib, importlib.util
 import libcst
 import libcst.matchers as cstm
 
+from pyprince.parser.module_finder import ModuleFinder
 from pyprince.parser.Project import Project, Module
 from pyprince.logger import logger
 
@@ -15,14 +16,16 @@ from pyprince.logger import logger
 def parse_project_new(entry_file: Path) -> Project:
     logger.info(f"Parsing started from {entry_file.absolute()}")
     # We need to set this, because native parser can segfault without throwing an exception
+    # Also the native parser will fail when running multiple testcases,
+    # because then it tries to initialize it multiple times.
     # See: https://github.com/Instagram/LibCST/issues/980
-    # os.environ["LIBCST_PARSER_TYPE"] = "pure"
+    os.environ["LIBCST_PARSER_TYPE"] = "pure"
 
     proj = Project()
     # For the root file of the project, it may not be in the sys.path, so we add it so importlib can find it
     sys.path = [str(entry_file.parent)] + sys.path
     root_name = entry_file.stem
-    root = _parse_module(proj, root_name)
+    root: Module = _parse_module(root_name)
     if root is None:
         sys.path = sys.path[1:]
         return proj
@@ -30,14 +33,18 @@ def parse_project_new(entry_file: Path) -> Project:
     proj.add_root_module(root.name)
     proj.add_module(root)
 
+    if root.syntax_tree is not None:
+        proj.add_syntax_tree(root.name, root.syntax_tree)
     remaining_modules = set(root.submodules)
 
     while len(remaining_modules) > 0:
         next_module: str = remaining_modules.pop()
-        mod = _parse_module(proj, next_module)
+        mod = _parse_module(next_module)
         if mod is None:
             continue
         proj.add_module(mod)
+        if mod.syntax_tree is not None:
+            proj.add_syntax_tree(mod.name, mod.syntax_tree)
         for sub in mod.submodules:
             if not proj.has_module(sub):
                 remaining_modules.add(sub)
@@ -46,16 +53,16 @@ def parse_project_new(entry_file: Path) -> Project:
     return proj
 
 
-def _parse_module(proj: Project, module_name: str) -> Module:
+def _parse_module(module_name: str) -> Module:
     try:
-        return _parse_module_unchecked(proj, module_name)
+        return _parse_module_unchecked(module_name)
     except Exception as e:
         logger.exception(f"Error in _parse_module for module {module_name}")
     mod = Module(module_name, None, None)
     return mod
 
 
-def _parse_module_unchecked(proj: Project, module_name: str) -> Module:
+def _parse_module_unchecked(module_name: str) -> Module:
     logger.debug(f"Parsing module {module_name}")
     spec = _find_module(module_name)
 
@@ -83,7 +90,6 @@ def _parse_module_unchecked(proj: Project, module_name: str) -> Module:
     content = Path(spec.origin).read_bytes()  # TODO: DI FileLoader
     cst: libcst.Module = libcst.parse_module(content)
     mod = Module(spec.name, spec.origin, cst)
-    proj.add_syntax_tree(spec.name, cst)
 
     submodules = _extract_module_import_names(cst)
     for sub in submodules:
@@ -101,7 +107,11 @@ def _find_module(module_name: str):
     # Maybe importlib.util.find_spec can help? It seems to rely on import for relative names, so probably not :(
     # see importlib.machinery.PathFinder or iterate htrough sys.meta_path?
     try:
+        if module_name == "os.path":
+            aaas = "a"
+        # return ModuleFinder().find_module(module_name)
         return importlib.util.find_spec(module_name)
+
     except (ModuleNotFoundError, ValueError):
         # ModuleNotFoundError happens for org.python.core in pickle.py
         # ValueError happens for builtins, because it does not have a spec
