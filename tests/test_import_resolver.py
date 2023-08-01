@@ -129,7 +129,41 @@ class TestImportResolver(PyPrinceTestCase):
 
     def test_relative_import(self):
         # Test relative import from package
-        pass
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import reltest
+                reltest.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "__init__.py",
+            textwrap.dedent(
+                """
+                from .impl import say
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "impl.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        sub_module = project.get_module("reltest.impl")
+        assert sub_module is not None and sub_module.path is not None
+        self.assertEqual(Path(sub_module.path), self.test_root / test_name / "reltest/impl.py")
 
     # TODO: test relative imports in subpackage
     # TODO: test start imports

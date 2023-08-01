@@ -106,26 +106,28 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         project: Project = parse_project(self.test_root / test_name / "main.py")
         # fmt: off
         expectedNodes = [
-            "main", "io", "abc", "_py_abc", "_abc", "_io", "_weakrefset", "types", 
-            "sys", "functools", "_weakref", "typing", "contextlib", "_collections_abc", "collections", "reprlib", "operator", 
-            "copy", "re", "enum", "sre_constants", "_operator", "builtins", "_locale", "warnings", "heapq", "copyreg", "itertools", "collections.abc", 
-            "keyword", "weakref", "_warnings", "_functools", "traceback", "_collections", "tracemalloc", "org.python.core", "_heapq", "_thread", 
-            "sre_compile", "sre_parse", "_sre", "gc", "atexit", "fnmatch", "pickle", "ntpath", "linecache", "unicodedata", "pprint", "struct", "_struct", 
-            "time", "_pickle", "_compat_pickle", "genericpath", "posixpath", "tokenize", "stat", "doctest", "os", "nt", "_tracemalloc", "inspect", "argparse", 
-            "codecs", "unittest", "runner", "async_case", "encodings", "textwrap", "_winapi", "dis", "posix", "suite", "signals", "_codecs", "importlib.machinery", 
-            "_imp", "gettext", "string", "subprocess", "loader", "result", "opcode", "_bootstrap_external", "case", "__future__", "shutil", "_stat", "_string", 
-            "token", "pwd", "encodings.mbcs", "importlib", "ast", "signal", "_opcode", "pdb", "grp", "zipfile", "difflib", "locale", "_bootstrap", "_ast", 
-            "_bootlocale", "tarfile", "bdb", "binascii", "importlib.util", "errno", "msvcrt", "selectors", "lzma", "code", "codeop", "threading", "runpy", 
-            "readline", "_lzma", "getopt", "bz2", "zlib", "_posixsubprocess", "pkgutil", "select", "gzip", "_threading_local", "glob", "pydoc", "_signal", 
-            "platform", "__main__", "plistlib", "math", "pydoc_data.topics", "webbrowser", "_frozen_importlib", "zipimport", "shlex", "_bz2", "tempfile", 
-            "cmd", "_frozen_importlib_external", "email.message", "urllib.parse", "random", "vms_lib", "hashlib", "uu", "_sha3", "py_compile", "_md5", 
-            "encodings.aliases", "_sha1", "_hashlib", "_sha256", "http.server", "optparse", "_random", "_blake2", "sysconfig", "email.iterators", 
-            "mimetypes", "_osx_support", "_compression", "email.policy", "_aix_support", "quopri", "email.utils", "winreg", "socketserver", "socket", 
-            "marshal", "datetime", "email", "email._policybase", "java.lang", "statistics", "email.contentmanager", "_statistics", "_socket", 
-            "email.generator", "_sha512", "_datetime", "tty", "_winreg", "email.headerregistry", "email._encoded_words", "_strptime", "distutils", 
-            "xml.parsers.expat", "base64", "fractions", "pyexpat", "http", "logging", "numbers", "termios", "calendar", "html", "http.client", 
-            "_bootsubprocess", "decimal", "array", "email.parser", "ssl", "email.errors", "email.charset", "email._parseaddr", "bisect", "_bisect", 
-            "email.feedparser", "html.entities", "email.encoders", "email.quoprimime", "_decimal", "_ssl", "_pydecimal", "email.base64mime", "contextvars", "_contextvars"
+            "main", "io", "_io", "abc", "_abc", "_py_abc", "_weakrefset", "_weakref", "types", "sys", "functools", "collections", "warnings", "linecache", 
+            "weakref", "tokenize", "heapq", "gc", "_warnings", "_collections_abc", "os", "subprocess", "contextlib", "time", "signal", "_functools", "keyword", 
+            "_collections", "re", "copy", "stat", "_locale", "builtins", "grp", "_heapq", "traceback", "operator", "itertools", "_thread", "sre_constants", 
+            "enum", "errno", "threading", "select", "_stat", "sre_compile", "pwd", "_winapi", "token", "codecs", "reprlib", "nt", "_signal", "typing", 
+            "posix", "posixpath", "_posixsubprocess", "msvcrt", "_threading_local", "_codecs", "atexit", "tracemalloc", "doctest", "argparse", "_operator", 
+            "org.python.core", "_sre", "sre_parse", "ntpath", "selectors", "_tracemalloc", "textwrap", "__future__", "inspect", "copyreg", "unicodedata", 
+            "gettext", "importlib.machinery", "struct", "_struct", "math", "genericpath", "shutil", "difflib", "unittest", "suite", "ast", "collections.abc", 
+            "_imp", "bz2", "_compression", "pickle", "loader", "encodings", "importlib", "locale", "encodings.aliases", "dis", "_bootlocale", "signals", 
+            "_bootstrap", "pdb", "fnmatch", "readline", "_bootstrap_external", "opcode", "result", "winreg", "string", "lzma", "async_case", "_lzma", "runner", 
+            "zlib", "case", "_pickle", "glob", "code", "marshal", "encodings.mbcs", "zipfile", "_log", "pprint", "tarfile", "_frozen_importlib", "binascii", 
+            "shlex", "_string", "_compat_pickle", "util", "_ast", "getopt", "importlib.metadata", "_opcode", "logging", "gzip", "pathlib", "bdb", 
+            "importlib.abc", "__main__", "pydoc", "cmd", "_bz2", "runpy", "tty", "_frozen_importlib_external", "configparser", "tempfile", "email", "pkgutil", 
+            "platform", "importlib.util", "email.parser", "codeop", "plistlib", "datetime", "pydoc_data.topics", "asyncio", "urllib.parse", "runners", 
+            "base_events", "termios", "py_compile", "unix_events", "java.lang", "http.server", "_winreg", "mimetypes", "sysconfig", "socketserver", "vms_lib", 
+            "threads", "_osx_support", "csv", "_csv", "ssl", "pep517", "_ssl", "zipimport", "random", "locks", "webbrowser", "transports", "exceptions", 
+            "email.message", "xml.parsers.expat", "_datetime", "queues", "streams", "windows_events", "hashlib", "uu", "log", "email.utils", "email._parseaddr", 
+            "html", "concurrent.futures", "tasks", "http.client", "_aix_support", "email.generator", "email._encoded_words", "_sha256", "_md5", "statistics", 
+            "numbers", "_overlapped", "email._policybase", "fractions", "_random", "socket", "email.feedparser", "base64", "_sha1", "_sha512", "futures", 
+            "coroutines", "_statistics", "http", "email.iterators", "decimal", "array", "_blake2", "distutils", "_asyncio", "email.charset", "_strptime", 
+            "protocols", "calendar", "_sha3", "optparse", "events", "email.quoprimime", "contextvars", "bisect", "email.policy", "_bisect", "_pydecimal", 
+            "quopri", "pyexpat", "_bootsubprocess", "_hashlib", "email.encoders", "_contextvars", "email.contentmanager", "html.entities", "email.base64mime", 
+            "_socket", "_decimal", "email.headerregistry", "email.errors"
         ]
         # fmt: on
         # module dependency nodes should be unique.
@@ -156,5 +158,3 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         expectedNodes = ["main", "argparse", "unicodedata", "pwd"]
         actual = generators.describe_module_dependencies(project).to_dict()
         self.assertContains(actual["nodes"], expectedNodes)
-
-    # TODO: Additional test case: create 2 submodules with the same name, see if node names are unique
