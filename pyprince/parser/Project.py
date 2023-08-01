@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from importlib.machinery import ModuleSpec
 from types import ModuleType
 from typing import Iterable, Optional, Union
 import inspect
@@ -8,12 +9,21 @@ import inspect
 import libcst
 
 
+@dataclass(frozen=True)
+class ModuleIdentifier:
+    name: str
+    spec: Optional[ModuleSpec] = None
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
 @dataclass
 class Module:
     name: str
     path: Union[str, None]  # None means we dont know the physical location of the module
     syntax_tree: Union[libcst.Module, None]  # None means the module could not be parsed
-    submodules: list[str] = field(default_factory=list)
+    submodules: list[ModuleIdentifier] = field(default_factory=list)
 
 
 @dataclass

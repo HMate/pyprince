@@ -45,7 +45,7 @@ def _describe_deps(proj: Project) -> DependencyDescriptor:
         if mod is None:
             continue
         for sub in mod.submodules:
-            result.add_edge(mod.name, sub)
+            result.add_edge(mod.name, sub.name)
 
     return result
 
