@@ -3,7 +3,7 @@ import traceback
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Optional
+from typing import List, Optional, Tuple
 import importlib, importlib.util
 
 import libcst
@@ -84,9 +84,9 @@ def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None, debug
     if mod in visited:
         return
     visited.append(mod)
-    builtins: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isbuiltin)
-    functions: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isfunction)
-    classes: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isclass)
+    builtins: List[Tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isbuiltin)
+    functions: List[Tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isfunction)
+    classes: List[Tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isclass)
 
     names_seen = []
     names_seen.append(get_module_name(mod))
@@ -108,7 +108,7 @@ def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None, debug
     for name, cls in classes:
         _import_and_load(cls.__module__)
 
-    subs: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
+    subs: List[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
     for name, sub in subs:
         # Modules are singletons, so extending one will extend nested modules too.
         _load_missing_modules(entry_file, sub, visited, current_debug_path)

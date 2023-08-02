@@ -1,5 +1,7 @@
 import json
 import traceback
+from typing import List
+
 from pyprince.generators import DependencyDescriptor
 
 
@@ -12,7 +14,7 @@ def exception_to_json() -> str:
 
 
 def to_graphviz_dot(descriptor: DependencyDescriptor) -> str:
-    file_builder: list[str] = []
+    file_builder: List[str] = []
     file_builder.append("digraph G {")
     for parent, targets in descriptor.edges.items():
         for target in targets:

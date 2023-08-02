@@ -1,6 +1,7 @@
 from types import ModuleType
 import inspect
 from collections import defaultdict
+from typing import List
 
 from pyprince.parser import get_module_name
 from pyprince.parser import Project, Module
@@ -8,8 +9,8 @@ from pyprince.parser import Project, Module
 
 class DependencyDescriptor:
     def __init__(self) -> None:
-        self.nodes: list[str] = []
-        self.edges: dict[str, list[str]] = defaultdict(list)
+        self.nodes: List[str] = []
+        self.edges: dict[str, List[str]] = defaultdict(List)
 
     def add_node(self, node: str):
         self.nodes.append(node)
@@ -62,7 +63,7 @@ def _describe_deps_from_imports(proj: Project) -> DependencyDescriptor:
             visited.add(mod)
             result.add_node(get_module_name(mod))
 
-        subs: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
+        subs: List[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
         for name, sub in subs:
             if sub == mod:
                 continue

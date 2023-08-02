@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from importlib.machinery import ModuleSpec
 from types import ModuleType
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, List
 import inspect
 
 import libcst
@@ -23,21 +23,21 @@ class Module:
     name: str
     path: Union[str, None]  # None means we dont know the physical location of the module
     syntax_tree: Union[libcst.Module, None]  # None means the module could not be parsed
-    submodules: list[ModuleIdentifier] = field(default_factory=list)
+    submodules: List[ModuleIdentifier] = field(default_factory=list)
 
 
 @dataclass
 class Project:
     # The mapping of aliases to importLocations
     _loaded_modules: Optional[ModuleType] = None
-    _root_modules: list[str] = field(default_factory=list)
+    _root_modules: List[str] = field(default_factory=list)
     _modules: dict[str, Module] = field(default_factory=dict)
     _syntax_trees: dict[str, libcst.Module] = field(default_factory=dict)
 
     def add_root_module(self, module_name: str):
         self._root_modules.append(module_name)
 
-    def get_root_modules(self) -> list[str]:
+    def get_root_modules(self) -> List[str]:
         return self._root_modules
 
     def add_module(self, module: Module):
@@ -78,10 +78,10 @@ class Project:
         visited = []
         yield from self._recursively_enumerate_submodules(self._loaded_modules, visited)
 
-    def _recursively_enumerate_submodules(self, mod: ModuleType, visited: list[ModuleType]) -> Iterable[ModuleType]:
+    def _recursively_enumerate_submodules(self, mod: ModuleType, visited: List[ModuleType]) -> Iterable[ModuleType]:
         visited.append(mod)
         yield mod
-        subs: list[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
+        subs: List[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
         for name, sub in subs:
             if sub not in visited:
                 yield from self._recursively_enumerate_submodules(sub, visited)
@@ -100,7 +100,7 @@ class Project:
             return None
 
     def find_module_for_function(self, func_name: str) -> tuple[Optional[str], Optional[libcst.Module]]:
-        functions: list[tuple[str, function]] = inspect.getmembers(self._loaded_modules, inspect.isfunction)
+        functions: List[tuple[str, function]] = inspect.getmembers(self._loaded_modules, inspect.isfunction)
         for name, func in functions:
             if name == func_name:
                 return func.__module__, self.get_syntax_tree(func.__module__)

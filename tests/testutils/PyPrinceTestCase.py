@@ -1,5 +1,6 @@
 import collections.abc
 import unittest
+from typing import List
 
 from pyprince.logger import logger, get_log_folder
 
@@ -9,9 +10,10 @@ class PyPrinceTestCase(unittest.TestCase):
 
     def __init__(self, methodName="runTest"):
         super().__init__(methodName)
-        logger.add(get_log_folder() / "pyprince_test.log", level="DEBUG", diagnose=True, retention=10, rotation="00:00")
+        logger.add(get_log_folder() / "pyprince_test.log", level="TRACE", diagnose=True, retention=10, rotation="00:00")
+        logger.debug(f"**** Starting test {methodName} ****")
 
-    def assertListElementsAreUnique(self, container: list, msg=None):
+    def assertListElementsAreUnique(self, container: List, msg=None):
         uniques = set(container)
         if len(uniques) == len(container):
             return
