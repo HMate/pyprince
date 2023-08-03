@@ -1,10 +1,11 @@
+from typing import Optional
 import unittest
 import textwrap
 from pathlib import Path
 
 from tests import testutils
 from tests.testutils import PackageGenerator, PyPrinceTestCase
-from pyprince.parser.Project import Project
+from pyprince.parser.Project import Module, Project
 from pyprince.parser import parse_project
 
 # Python import possibilities:
@@ -161,12 +162,63 @@ class TestImportResolver(PyPrinceTestCase):
 
         test_main = self.test_root / test_name / "main.py"
         project: Project = parse_project(test_main)
-        sub_module = project.get_module("reltest.impl")
-        assert sub_module is not None and sub_module.path is not None
-        self.assertEqual(Path(sub_module.path), self.test_root / test_name / "reltest/impl.py")
+        self.assertIsNotNone(project.get_module("reltest"))
+        self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
+
+    def test_resolving_sibling_module_import(self):
+        # Test if a submodules imports a sibling package their parents gets resolved correctly
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import reltest
+                reltest.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "__init__.py",
+            textwrap.dedent(
+                """
+                from .impl import say
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "impl.py",
+            textwrap.dedent(
+                """
+                from .other import say
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "other.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self.assertIsNotNone(project.get_module("reltest"))
+        self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
+        self._assert_module_path(project.get_module("reltest.other"), self.test_root / test_name / "reltest/other.py")
 
     # TODO: test relative imports in subpackage
     # TODO: test start imports
+
+    def _assert_module_path(self, module: Optional[Module], expected_path: Path):
+        assert module is not None and module.path is not None
+        self.assertEqual(Path(module.path), expected_path)
 
 
 if __name__ == "__main__":

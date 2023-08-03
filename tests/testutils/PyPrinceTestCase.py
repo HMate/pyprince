@@ -23,13 +23,14 @@ class PyPrinceTestCase(unittest.TestCase):
                 return True
             return False
 
-        logger.add(
-            get_log_folder() / "pyprince_test.log",
-            level="TRACE",
-            diagnose=True,
-            retention=20,
-            rotation=should_rotate_log,
-        )
+        if g_log_should_rotate:
+            logger.add(
+                get_log_folder() / "pyprince_test.log",
+                level="TRACE",
+                diagnose=True,
+                retention=20,
+                rotation=should_rotate_log,
+            )
         logger.info(f"**** Starting test {methodName} ****")
 
     def assertListElementsAreUnique(self, container: List, msg=None):

@@ -14,6 +14,11 @@ class ModuleIdentifier:
     name: str
     spec: Optional[ModuleSpec] = None
 
+    def __eq__(self, other):
+        if isinstance(other, ModuleIdentifier):
+            return self.name == other.name
+        return False
+
     def __hash__(self) -> int:
         return hash(self.name)
 

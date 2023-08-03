@@ -10,7 +10,7 @@ from pyprince.parser import Project, Module
 class DependencyDescriptor:
     def __init__(self) -> None:
         self.nodes: List[str] = []
-        self.edges: dict[str, List[str]] = defaultdict(List)
+        self.edges: dict[str, List[str]] = defaultdict(list)
 
     def add_node(self, node: str):
         self.nodes.append(node)
