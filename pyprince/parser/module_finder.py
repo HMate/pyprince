@@ -30,7 +30,7 @@ class ModuleFinder:
         """
         # If a module is relative, or a true child of the current module, we have to resolve its name by keeping track of the current module name
         # First see if the module exists under the parent path. This handles shadowed and relative imports.
-        if parent_module is not None:
+        if (parent_module is not None) and ("." not in module_name):
             module = self.find_relative_module(module_name, parent_module)
             if module is not None:
                 return module
@@ -45,7 +45,7 @@ class ModuleFinder:
                 logger.warning(f"Could not resolve path to submodule {module_name}")
             sub_id = ModuleIdentifier(module_name)
             return sub_id
-        logger.trace(f"Resolved module {spec.name} from {module_name}")
+        logger.trace(f"Resolved module {spec.name} from {module_name} to {spec.origin}")
         sub_id = ModuleIdentifier(spec.name, spec)
         return sub_id
 

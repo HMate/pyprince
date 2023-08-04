@@ -99,8 +99,8 @@ class TestImportResolver(PyPrinceTestCase):
         self.assertIsNotNone(project.get_syntax_tree("other"))
 
     def test_hiding_toplevel_import(self):
-        # Test importing a package that exist in the stdlib as a subdirectory from the entrypoint works.
-        # It should shadow the builtin logging module.
+        """Test importing a package that exist in the stdlib as a subdirectory from the entrypoint works.
+        It should shadow the builtin logging module."""
         test_name = Path(self._testMethodName)
         gen = PackageGenerator()
         gen.add_file(
@@ -131,7 +131,7 @@ class TestImportResolver(PyPrinceTestCase):
         self.assertEqual(Path(log_module.path), self.test_root / test_name / "logging/__init__.py")
 
     def test_relative_import(self):
-        # Test relative import from package
+        """Test relative import from package"""
         test_name = Path(self._testMethodName)
         gen = PackageGenerator()
         gen.add_file(
@@ -168,7 +168,7 @@ class TestImportResolver(PyPrinceTestCase):
         self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
 
     def test_resolving_sibling_module_import(self):
-        # Test if a submodules imports a sibling package their parents gets resolved correctly
+        """Test if a submodules imports a sibling package their parents gets resolved correctly"""
         test_name = Path(self._testMethodName)
         gen = PackageGenerator()
         gen.add_file(
@@ -216,7 +216,7 @@ class TestImportResolver(PyPrinceTestCase):
         self._assert_module_path(project.get_module("reltest.other"), self.test_root / test_name / "reltest/other.py")
 
     def test_import_from_dot(self):
-        # Test if a submodules imports a sibling package their parents gets resolved correctly
+        """Test if a submodules imports a sibling package their parents gets resolved correctly"""
         test_name = Path(self._testMethodName)
         gen = PackageGenerator()
         gen.add_file(
@@ -254,7 +254,7 @@ class TestImportResolver(PyPrinceTestCase):
         self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
 
     def test_skipping_non_module_import(self):
-        # if a from dot import contains an alias to a non-module name, it should be skipped
+        """if a from dot import contains an alias to a non-module name, it should be skipped"""
         test_name = Path(self._testMethodName)
         gen = PackageGenerator()
         gen.add_file(
@@ -290,6 +290,44 @@ class TestImportResolver(PyPrinceTestCase):
         test_main = self.test_root / test_name / "main.py"
         project: Project = parse_project(test_main)
         self.assertEqual(project.get_module("reltest.impl").submodules[0].name, "reltest")
+
+    def test_resolving_from_import_submodule_(self):
+        """if we import with 'from package' a regular module, only the imported submodule
+        should be in the dependencies and the empty parent package should be skipped"""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                from reltest import impl
+                impl.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "__init__.py",
+            textwrap.dedent(
+                """
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "impl.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(fixed_message + msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        main = project.get_module("main")
+        self.assertEqual(len(main.submodules), 1)
+        self.assertEqual(main.submodules[0].name, "reltest.impl")
 
     # TODO: test: from .. import util
     # TODO: test: from asd import *

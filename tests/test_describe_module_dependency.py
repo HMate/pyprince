@@ -106,37 +106,61 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         project: Project = parse_project(self.test_root / test_name / "main.py")
         # fmt: off
         expectedNodes = [
-            "main", "io", "abc", "_io", "_py_abc", "_abc", "_weakrefset", "types", "_collections_abc", "sys", "_weakref", "warnings", "re", "tracemalloc", "_warnings", 
-            "pickle", "enum", "_locale", "traceback", "sre_parse", "struct", "collections.abc", "argparse", "codecs", "builtins", "gettext", "ntpath", "itertools", "functools", 
-            "fnmatch", "linecache", "sre_compile", "genericpath", "pprint", "sre_constants", "posixpath", "weakref", "_pickle", "_compat_pickle", "unicodedata", "_codecs", 
-            "atexit", "pwd", "os", "textwrap", "errno", "typing", "string", "_struct", "stat", "_stat", "copyreg", "_tracemalloc", "encodings", "doctest", "locale", "time", 
-            "org.python.core", "subprocess", "shutil", "_functools", "reprlib", "collections", "copy", "bz2", "zlib", "tokenize", "posix", "_sre", "__future__", "token", 
-            "gc", "_thread", "nt", "encodings.aliases", "inspect", "_compression", "_posixsubprocess", "operator", "selectors", "msvcrt", "lzma", "importlib.machinery", "pdb", 
-            "heapq", "importlib._bootstrap_external", "glob", "marshal", "grp", "_collections", "_bz2", "_bootlocale", "_string", "encodings.mbcs", "dis", "_winapi", "keyword", 
-            "contextlib", "winreg", "_operator", "difflib", "ast", "shlex", "code", "runpy", "importlib", "unittest", "select", "tarfile", "threading", "zipfile", "readline", 
-            "_frozen_importlib", "getopt", "math", "__main__", "cmd", "_frozen_importlib_external", "importlib._bootstrap", "codeop", "gzip", "pydoc", "importlib.metadata", 
-            "importlib.abc", "_threading_local", "binascii", "unittest.result", "_lzma", "configparser", "_heapq", "pep517", "signal", "_imp", "unittest.case", "unittest.async_case",
-            "urllib.parse", "bdb", "opcode", "csv", "unittest.runner", "pkgutil", "unittest.suite", "webbrowser", "unittest.loader", "unittest.main", "importlib.util", "py_compile", 
-            "pydoc_data.topics", "pathlib", "unittest.signals", "_ast", "http.server", "tempfile", "tty", "email.message", "email.utils", "http.client", "platform", "plistlib", 
-            "socketserver", "email", "base64", "_winreg", "mimetypes", "email._parseaddr", "email.parser", "unittest._log", "sysconfig", "email.iterators", "datetime", "unittest.util", 
-            "email._encoded_words", "email.policy", "email.charset", "email.base64mime", "socket", "quopri", "_csv", "uu", "xml.parsers.expat", "termios", "email._policybase", 
-            "_signal", "_osx_support", "_opcode", "asyncio", "vms_lib", "asyncio.threads", "asyncio.streams", "array", "zipimport", "html", "logging", "asyncio.subprocess", 
-            "contextvars", "java.lang", "email.feedparser", "asyncio.events", "asyncio.protocols", "asyncio.runners", "asyncio.format_helpers", "random", "calendar", "asyncio.exceptions", 
-            "asyncio.windows_events", "email.generator", "http", "asyncio.locks", "email.contentmanager", "asyncio.tasks", "_datetime", "html.entities", "_asyncio", "pyexpat", 
-            "asyncio.unix_events", "asyncio.constants", "optparse", "distutils", "ssl", "asyncio.queues", "statistics", "_sha512", "email.encoders", "_strptime", "decimal", "_aix_support", 
-            "_statistics", "_bootsubprocess", "email.quoprimime", "asyncio.selector_events", "_contextvars", "_socket", "asyncio.coroutines", "asyncio.futures", "asyncio.transports",
-            "asyncio.proactor_events", "bisect", "email.headerregistry", "asyncio.windows_utils", "asyncio.trsock", "_pydecimal", "_random", "asyncio.base_events", 
-            "asyncio.base_subprocess", "_decimal", "fractions", "asyncio.base_tasks", "hashlib", "email.errors", "_overlapped", "concurrent.futures", 
-            "asyncio.log", "_sha256", "numbers", "concurrent.format_helpers", "_bisect", "asyncio.base_futures", "asyncio.sslproto", "_ssl", "_sha3", "_md5", 
-            "concurrent.exceptions", "concurrent.base_futures", "asyncio.staggered", "_blake2", "_hashlib", "concurrent.events", "_sha1", "concurrent.constants", 
-            "concurrent.subprocess", "concurrent.protocols", "concurrent.tasks", "concurrent.queues", "concurrent.streams", "concurrent.log", "concurrent.coroutines", 
-            "concurrent.locks", "concurrent.base_tasks"
+            "main", "io", "_io", "abc", "_py_abc", "_weakrefset", "_weakref", "_abc", "types", "_collections_abc", 
+            "functools", "_functools", "typing", "weakref", "itertools", "gc", "copy", "copyreg", "warnings", "tracemalloc", 
+            "builtins", "collections", "_collections", "collections.abc", "sys", "_warnings", "reprlib", "linecache", 
+            "_thread", "contextlib", "heapq", "doctest", "re", "difflib", "unittest", "__future__", "unittest.runner", 
+            "unittest.case", "unittest.suite", "inspect", "enum", "dis", "_locale", "unittest.util", "sre_constants", 
+            "_sre", "argparse", "token", "org.python.core", "pdb", "fnmatch", "_heapq", "ntpath", "unittest.main", "shutil", 
+            "nt", "tarfile", "keyword", "pickle", "importlib", "atexit", "traceback", "shlex", "errno", "sre_compile", 
+            "unittest.loader", "opcode", "operator", "_operator", "os", "importlib.machinery", "gettext", 
+            "importlib._bootstrap_external", "lzma", "unittest.async_case", "getopt", "gzip", "unittest.result", "pwd", 
+            "pydoc", "_frozen_importlib", "threading", "time", "posixpath", "grp", "stat", "locale", "email.message", 
+            "_compression", "bz2", "_lzma", "http.server", "string", "email._policybase", "code", "importlib.metadata", 
+            "select", "importlib.util", "quopri", "subprocess", "_bootlocale", "socketserver", "tokenize", "_tracemalloc", 
+            "http.client", "codecs", "bdb", "_opcode", "csv", "ssl", "pprint", "ast", "_pickle", "sre_parse", "textwrap", 
+            "tempfile", "struct", "runpy", "unittest._log", "signal", "_threading_local", "urllib.parse", "encodings", 
+            "html", "__main__", "email.iterators", "glob", "genericpath", "email.generator", "unittest.signals", "msvcrt", 
+            "pkgutil", "_bz2", "zlib", "_string", "_compat_pickle", "pathlib", "selectors", "cmd", "_csv", "tty", "zipfile", 
+            "mimetypes", "pep517", "unicodedata", "posix", "sysconfig", "zipimport", "email", "http", "calendar", "logging", 
+            "platform", "_osx_support", "email.utils", "readline", "_frozen_importlib_external", "pydoc_data.topics", 
+            "importlib._bootstrap", "_imp", "_ast", "_struct", "email._encoded_words", "html.entities", "distutils", 
+            "winreg", "_winapi", "_signal", "_aix_support", "_winreg", "marshal", "email.parser", "codeop", "uu", "_stat", 
+            "encodings.mbcs", "asyncio", "_posixsubprocess", "asyncio.locks", "asyncio.tasks", "base64", "asyncio.base_tasks", 
+            "email.policy", "binascii", "asyncio.queues", "webbrowser", "_ssl", "email._parseaddr", "asyncio.subprocess", 
+            "py_compile", "termios", "_codecs", "optparse", "asyncio.base_events", "datetime", "vms_lib", "asyncio.sslproto", 
+            "configparser", "asyncio.threads", "concurrent.futures", "math", "random", "statistics", "java.lang", "plistlib", 
+            "decimal", "email.charset", "_decimal", "email.contentmanager", "_statistics", "email.quoprimime", "asyncio.log", 
+            "asyncio.transports", "_pydecimal", "asyncio.trsock", "email.errors", "_bootsubprocess", "asyncio.unix_events", 
+            "asyncio.events", "_datetime", "numbers", "asyncio.exceptions", "asyncio.streams", "email.encoders", "contextvars", 
+            "_strptime", "asyncio.base_futures", "bisect", "_contextvars", "asyncio.staggered", "asyncio.windows_events", 
+            "asyncio.coroutines", "asyncio.futures", "email.feedparser", "_asyncio", "_random", "asyncio.base_subprocess", 
+            "concurrent.futures._base", "email.headerregistry", "asyncio.windows_utils", "asyncio.protocols", "asyncio.runners", 
+            "socket", "importlib.abc", "encodings.aliases", "_sha512", "asyncio.constants", "fractions", "_overlapped", 
+            "asyncio.proactor_events", "asyncio.format_helpers", "concurrent.futures.process", "concurrent.futures.thread", 
+            "hashlib", "xml.parsers.expat", "_bisect", "email.base64mime", "array", "asyncio.selector_events", "_sha256", 
+            "_hashlib", "_md5", "pyexpat", "_sha3", "multiprocessing.queues", "multiprocessing", "_blake2", 
+            "multiprocessing.connection", "multiprocessing.synchronize", "_socket", "hmac", "multiprocessing.heap", 
+            "multiprocessing.resource_sharer", "_sha1", "multiprocessing.util", "queue", "multiprocessing.resource_tracker", 
+            "_queue", "multiprocessing.process", "_multiprocessing", "mmap", "_posixshmem", "multiprocessing.context", 
+            "multiprocessing.forkserver", "multiprocessing.popen_spawn_posix", "xmlrpc.client", "multiprocessing.spawn", 
+            "multiprocessing.sharedctypes", "multiprocessing.popen_forkserver", "multiprocessing.popen_fork", 
+            "multiprocessing.managers", "ctypes", "multiprocessing.pool", "multiprocessing.popen_spawn_win32", 
+            "multiprocessing.shared_memory", "_ctypes", "multiprocessing.reduction", "ctypes._endian", "multiprocessing.dummy", 
+            "secrets", "multiprocessing.dummy.connection"
         ]
         # fmt: on
         # module dependency nodes should be unique.
         actual = generators.describe_module_dependencies(project).to_dict()
         self.assertListElementsAreUnique(actual["nodes"])
         self.maxDiff = None
+        print(actual["nodes"])
+        self.assertNotIn(
+            "concurrent", actual["nodes"], "concurrent is an empty module, so nobody should be dependent on it"
+        )
+        self.assertNotIn(
+            "xml.parsers", actual["nodes"], "xml.parsers is an empty module, so nobody should be dependent on it"
+        )
         self.assertCountEqual(actual["nodes"], expectedNodes)
 
     def test_argparse_module(self):
