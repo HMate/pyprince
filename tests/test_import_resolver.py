@@ -1,3 +1,5 @@
+# pyright: reportOptionalMemberAccess=false
+
 from typing import Optional
 import unittest
 import textwrap
@@ -213,8 +215,84 @@ class TestImportResolver(PyPrinceTestCase):
         self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
         self._assert_module_path(project.get_module("reltest.other"), self.test_root / test_name / "reltest/other.py")
 
-    # TODO: test relative imports in subpackage
-    # TODO: test start imports
+    def test_import_from_dot(self):
+        # Test if a submodules imports a sibling package their parents gets resolved correctly
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import reltest
+                reltest.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "__init__.py",
+            textwrap.dedent(
+                """
+                from . import impl
+                say = impl.say
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "impl.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self.assertEqual(project.get_module("reltest").submodules[0].name, "reltest.impl")
+        self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
+
+    def test_skipping_non_module_import(self):
+        # if a from dot import contains an alias to a non-module name, it should be skipped
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import reltest
+                reltest.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "__init__.py",
+            textwrap.dedent(
+                """
+                fixed_message = "Carpe Diem"
+                from .impl import say
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "impl.py",
+            textwrap.dedent(
+                """
+                from . import fixed_message
+                def say(msg):
+                    print(fixed_message + msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self.assertEqual(project.get_module("reltest.impl").submodules[0].name, "reltest")
+
+    # TODO: test: from .. import util
+    # TODO: test: from asd import *
 
     def _assert_module_path(self, module: Optional[Module], expected_path: Path):
         assert module is not None and module.path is not None

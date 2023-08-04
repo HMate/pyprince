@@ -1,7 +1,8 @@
 import sys
 import os
 from pathlib import Path
-from typing import Optional, Union, List
+from typing import Optional, Tuple, Union, List
+import collections.abc
 
 import libcst
 import libcst.matchers as cstm
@@ -33,7 +34,7 @@ class ProjectParser:
         # For the root file of the project, it may not be in the sys.path, so we add it so importlib can find it
         sys.path = [str(entry_file.parent)] + sys.path
         self.finder.update_toplevel_module_paths(sys.path)
-        
+
         root_name = entry_file.stem
         root: Module = self._parse_module(ModuleIdentifier(root_name))
         if root is None:
@@ -67,7 +68,7 @@ class ProjectParser:
             return self._parse_module_unchecked(module_id)
         except Exception as e:
             logger.exception(f"Error in _parse_module for module {module_id.name}")
-        mod = Module(module_id.name, None, None)
+        mod = Module(module_id, None, None)
         return mod
 
     def _parse_module_unchecked(self, module_id: ModuleIdentifier) -> Module:
@@ -76,7 +77,7 @@ class ProjectParser:
         if spec is None or spec.origin is None:
             # I guess there can be multiple reasons.
             # One reason is when the import is platform specific. For example pwd is unix only
-            mod = Module(module_id.name, None, None)
+            mod = Module(module_id, None, None)
             return mod
         if (
             (spec.origin in ["built-in", "frozen"])
@@ -84,34 +85,52 @@ class ProjectParser:
             or (spec.origin.endswith(".pyc"))
             or (spec.origin.endswith(".pyo"))
         ):
-            mod = Module(module_id.name, spec.origin, None)
+            mod = Module(module_id, spec.origin, None)
             return mod
 
         if module_id.name == "pydoc_data.topics":
             # TODO: Right now libcst crashes on this file when parsing or when enumerating imports.
             # For now it does not affect us if we just skip the file.
             # In the future we may want to switch to parso/ast module, or hope it gets fixed.
-            mod = Module(module_id.name, spec.origin, None)
+            mod = Module(module_id, spec.origin, None)
             return mod
 
+        logger.debug(f"Parsing module {module_id.name} from {spec.origin}")
         content = Path(spec.origin).read_bytes()  # TODO: DI FileLoader
         cst: libcst.Module = libcst.parse_module(content)
-        mod = Module(module_id.name, spec.origin, cst)
+        mod = Module(module_id, spec.origin, cst)
 
-        submodules = self._extract_module_import_names(cst)
+        # TODO: If submodule is just an alias from an import, we will have to interpret code, or load the parent module.
+        submodules, relative_imports = self._extract_module_import_names(cst)
         for sub in submodules:
             sub_id = self.finder.find_module(sub, mod)
             mod.submodules.append(sub_id)
+        for level, sub in relative_imports:
+            if level == 1:
+                sub_id = self.finder.find_relative_module(sub, mod)
+                if sub_id is None:
+                    # the imported name is not considered a module at this point
+                    # But for dot imports this means this module depends on its parent package
+                    if self.finder.is_package_module(mod):
+                        # we are in a package module, and we searched inside ourselves, no additional deps
+                        continue
+                    parent_name = self.finder.get_parent_package_name(mod)
+                    sub_id = self.finder.find_module(parent_name)
+            else:
+                # TODO: Handle .., ... etc relative imports
+                logger.warning(f"Unhandled relative import level {level} for {sub} in {mod.name}")
+                continue
+            mod.submodules.append(sub_id)
         return mod
 
-    def _extract_module_import_names(self, root_cst: libcst.Module) -> List[str]:
+    def _extract_module_import_names(self, root_cst: libcst.Module) -> Tuple[List[str], List[Tuple[int, str]]]:
         # go through all the import statements and parse out the modules
         submodules: List[str] = []
+        relative_imports: List[Tuple[int, str]] = []
         import_exprs = cstm.findall(root_cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
         for import_expr in import_exprs:
             logger.debug(f"- {root_cst.code_for_node(import_expr)}")
             # get module name. Right now we dont use the module alias name, so we dont save it.
-            # TODO(0.0.3): Lets handle full import names - see modules like __main__, _bootstrap in different subfolders.
             if cstm.matches(import_expr, cstm.Import()):
                 assert isinstance(import_expr, libcst.Import)
                 for alias in import_expr.names:
@@ -131,8 +150,18 @@ class ProjectParser:
                     import_name = root_cst.code_for_node(import_expr.module)
                 elif isinstance(import_expr.module, libcst.Name):
                     import_name = import_expr.module.value
+                elif import_expr.module is None and import_expr.relative is not None:
+                    step_level = len(import_expr.relative)
+                    if isinstance(import_expr.names, collections.abc.Sequence):
+                        for alias in import_expr.names:
+                            relative_import = (step_level, alias.evaluated_name)
+                            if relative_import not in relative_imports:
+                                relative_imports.append(relative_import)
+                        continue
+                    else:
+                        logger.warning(f"Unhandled import branch - {import_expr}")
                 else:
                     logger.warning(f"Could not find import name - {import_expr}")
                 if import_name and (import_name not in submodules):
                     submodules.append(import_name)
-        return submodules
+        return submodules, relative_imports

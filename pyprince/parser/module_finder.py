@@ -25,34 +25,15 @@ class ModuleFinder:
         self._top_level_paths = [Path(p).resolve() for p in paths]
 
     def find_module(self, module_name: str, parent_module: Optional[Module] = None) -> ModuleIdentifier:
-        """Searches for a module with the given name. It first looks under the given parent module, then with the builtin finder."""
-
-        # TODO: If submodule is just an alias from an import, we will have to interpret code, or load the parent module.
-
+        """Searches for a module with the given name.
+        It first looks under the given parent package for a relative module, then with the builtin finder.
+        """
         # If a module is relative, or a true child of the current module, we have to resolve its name by keeping track of the current module name
         # First see if the module exists under the parent path. This handles shadowed and relative imports.
-        if (parent_module is not None) and (parent_module.path is not None):
-            parent_file = Path(parent_module.path)
-            search_path = parent_file.parent.resolve()
-            spec = self.find_module_under_path(module_name, [str(search_path)])
-            if spec is not None:
-                # if spec.name is already fully qualified, or we looked for a top level package then return it
-                if ("." in spec.name) or (search_path in self._top_level_paths):
-                    logger.trace(
-                        f"Found toplevel module {module_name} - {spec.name} - under top level path {search_path}"
-                    )
-                    return ModuleIdentifier(spec.name, spec)
-                # Otherwise we have to resolve the parent module name.
-                if parent_file.name == "__init__.py":
-                    logger.trace(f"Found submodule {module_name} - {parent_module.name} > {spec.name}")
-                    return ModuleIdentifier(f"{parent_module.name}.{spec.name}", spec)
-                # there should be a parent part, we throw away the last part
-                parent = parent_module.name.rpartition(".")[0]
-                logger.trace(
-                    f"Found sibling module {module_name} - {parent} > {spec.name} from {parent_module.name} : {parent_file}"
-                )
-                # If parent_module.path endswith .__init__.py we are okay. Otherwise we have to deduce who is the real parent.
-                return ModuleIdentifier(f"{parent}.{spec.name}", spec)
+        if parent_module is not None:
+            module = self.find_relative_module(module_name, parent_module)
+            if module is not None:
+                return module
 
         spec = self.find_spec(module_name)
         if spec is None:
@@ -67,6 +48,42 @@ class ModuleFinder:
         logger.trace(f"Resolved module {spec.name} from {module_name}")
         sub_id = ModuleIdentifier(spec.name, spec)
         return sub_id
+
+    def find_relative_module(self, module_name: str, parent_module: Module) -> Optional[ModuleIdentifier]:
+        """Searches for a relative module under parent_module. Returns None if there were no submodule found with the given name."""
+        if parent_module.path is None:
+            return None
+        parent_file = Path(parent_module.path)
+        search_path = parent_file.parent.resolve()
+        spec = self.find_module_under_path(module_name, [str(search_path)])
+        if spec is None:
+            return None
+        # if spec.name is already fully qualified, or we looked for a top level package then return it
+        if ("." in spec.name) or (search_path in self._top_level_paths):
+            logger.trace(f"Found toplevel module {module_name} - {spec.name} - under top level path {search_path}")
+            return ModuleIdentifier(spec.name, spec)
+        # Otherwise we have to resolve the parent module name.
+        is_parent_package = self.is_package_module(parent_module)
+        if is_parent_package:
+            logger.trace(f"Found submodule {module_name} - {parent_module.name} > {spec.name}")
+            return ModuleIdentifier(f"{parent_module.name}.{spec.name}", spec)
+        # there should be a parent part, we throw away the last part
+        parent = self.get_parent_package_name(parent_module)
+        logger.trace(
+            f"Found sibling module {module_name} - {parent} > {spec.name} from {parent_module.name} : {parent_file}"
+        )
+        # If parent_module.path endswith .__init__.py we are okay. Otherwise we have to deduce who is the real parent.
+        return ModuleIdentifier(f"{parent}.{spec.name}", spec)
+
+    def is_package_module(self, module: Module) -> bool:
+        """Return true if module is a package module, as in it can contain submodules."""
+        if module.path is None:
+            return False
+        parent_file = Path(module.path)
+        return parent_file.stem == "__init__"
+
+    def get_parent_package_name(self, module: Module) -> str:
+        return module.name.rpartition(".")[0]
 
     def find_spec(self, module_name: str) -> Optional[ModuleSpec]:
         """Wrapper around importlib.util.find_spec to find location of module by its full name."""

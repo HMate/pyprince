@@ -25,10 +25,14 @@ class ModuleIdentifier:
 
 @dataclass
 class Module:
-    name: str
+    id: ModuleIdentifier
     path: Union[str, None]  # None means we dont know the physical location of the module
     syntax_tree: Union[libcst.Module, None]  # None means the module could not be parsed
+    name: str = field(init=False)
     submodules: List[ModuleIdentifier] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.name = self.id.name
 
 
 @dataclass
