@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import sys
 import os
 from pathlib import Path
@@ -101,13 +102,13 @@ class ProjectParser:
         mod = Module(module_id, spec.origin, cst)
 
         # TODO: If submodule is just an alias from an import, we will have to interpret code, or load the parent module.
-        submodules, relative_imports = self._extract_module_import_names(cst)
-        for sub in submodules:
-            sub_id = self.finder.find_module(sub, mod)
+        module_imports, dot_imports = self._extract_module_import_names(cst)
+        for imp in module_imports:
+            sub_id = self.finder.find_module(imp.package_name, mod)
             mod.submodules.append(sub_id)
-        for level, sub in relative_imports:
-            if level == 1:
-                sub_id = self.finder.find_relative_module(sub, mod)
+        for imp in dot_imports:
+            if imp.relative_level == 1:
+                sub_id = self.finder.find_relative_module(imp.target, mod)
                 if sub_id is None:
                     # the imported name is not considered a module at this point
                     # But for dot imports this means this module depends on its parent package
@@ -118,15 +119,17 @@ class ProjectParser:
                     sub_id = self.finder.find_module(parent_name)
             else:
                 # TODO: Handle .., ... etc relative imports
-                logger.warning(f"Unhandled relative import level {level} for {sub} in {mod.name}")
+                logger.warning(f"Unhandled relative import level {imp.relative_level} for {imp} in {mod.name}")
                 continue
             mod.submodules.append(sub_id)
         return mod
 
-    def _extract_module_import_names(self, root_cst: libcst.Module) -> Tuple[List[str], List[Tuple[int, str]]]:
+    def _extract_module_import_names(
+        self, root_cst: libcst.Module
+    ) -> Tuple[List["ImportDescription"], List["FromImportDescription"]]:
         # go through all the import statements and parse out the modules
-        submodules: List[str] = []
-        relative_imports: List[Tuple[int, str]] = []
+        submodules: List[ImportDescription] = []
+        dot_imports: List[FromImportDescription] = []
         import_exprs = cstm.findall(root_cst, cstm.OneOf(cstm.Import(), cstm.ImportFrom()))
         for import_expr in import_exprs:
             logger.debug(f"- {root_cst.code_for_node(import_expr)}")
@@ -134,7 +137,7 @@ class ProjectParser:
             if cstm.matches(import_expr, cstm.Import()):
                 assert isinstance(import_expr, libcst.Import)
                 for alias in import_expr.names:
-                    import_name = alias.evaluated_name
+                    import_name = ImportDescription(alias.evaluated_name)
                     if import_name not in submodules:
                         submodules.append(import_name)
             if cstm.matches(import_expr, cstm.ImportFrom()):
@@ -145,18 +148,18 @@ class ProjectParser:
                 # - from foo -> module is a Name and relative is empty
                 # - from foo.bar -> module is an Attribute and relative is empty
                 assert isinstance(import_expr, libcst.ImportFrom)
-                import_name = None
+                import_name: Optional[ImportDescription] = None
                 if isinstance(import_expr.module, libcst.Attribute):
-                    import_name = root_cst.code_for_node(import_expr.module)
+                    import_name = ImportDescription(root_cst.code_for_node(import_expr.module))
                 elif isinstance(import_expr.module, libcst.Name):
-                    import_name = import_expr.module.value
+                    import_name = ImportDescription(import_expr.module.value)
                 elif import_expr.module is None and import_expr.relative is not None:
                     step_level = len(import_expr.relative)
                     if isinstance(import_expr.names, collections.abc.Sequence):
                         for alias in import_expr.names:
-                            relative_import = (step_level, alias.evaluated_name)
-                            if relative_import not in relative_imports:
-                                relative_imports.append(relative_import)
+                            relative_import = FromImportDescription(None, alias.evaluated_name, step_level)
+                            if relative_import not in dot_imports:
+                                dot_imports.append(relative_import)
                         continue
                     else:
                         logger.warning(f"Unhandled import branch - {import_expr}")
@@ -164,4 +167,23 @@ class ProjectParser:
                     logger.warning(f"Could not find import name - {import_expr}")
                 if import_name and (import_name not in submodules):
                     submodules.append(import_name)
-        return submodules, relative_imports
+        return submodules, dot_imports
+
+
+@dataclass
+class ImportDescription:
+    """ex: import package_name"""
+
+    package_name: str
+
+
+@dataclass
+class FromImportDescription:
+    """ex: from package_name import target
+    ex: from ..package_name import target
+             ^^-- relative_level = 2
+    """
+
+    package_name: Optional[str]
+    target: str
+    relative_level: Optional[int] = None
