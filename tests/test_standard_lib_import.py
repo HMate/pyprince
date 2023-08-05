@@ -1,91 +1,19 @@
-from pathlib import Path
 import textwrap
+from pathlib import Path
 
-import tests.testutils as testutils
+from tests import testutils
 from tests.testutils import PackageGenerator, PyPrinceTestCase
-from pyprince.parser import parse_project, Project
-from pyprince import generators, serializer
+from pyprince.parser.Project import Module, Project
+from pyprince.parser import parse_project
+from pyprince import generators
 
 
-class TestDescribeModuleDependency(PyPrinceTestCase):
+class TestImportResolver(PyPrinceTestCase):
+    """Collection of long running tests that import from the actual standard library."""
+
     def setUp(self):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()
-
-    def test_single_dependency(self):
-        test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
-        gen.add_file(
-            test_name / "main.py",
-            textwrap.dedent(
-                """
-                from util import some_functionality
-
-                def main():
-                    some_functionality(["Mom", "Dad"], ["Grandpa", "Cousin"])
-                """
-            ).lstrip(),
-        )
-        gen.add_file(
-            test_name / "util.py",
-            textwrap.dedent(
-                """
-                def some_functionality(parents, relatives):
-                    print(f"Family: {parents + relatives}")
-                """
-            ).lstrip(),
-        )
-        gen.generate_files(self.test_root)
-
-        project: Project = parse_project(self.test_root / test_name / "main.py")
-        expected = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
-        actual = generators.describe_module_dependencies(project)
-        self.assertDictEqual(expected, actual.to_dict())
-
-    def test_json_serialize(self):
-        deps = generators.DependencyDescriptor()
-        deps.add_node("main")
-        deps.add_node("util")
-        deps.add_edge("main", "util")
-
-        expected = textwrap.dedent(
-            """\
-            {
-              "nodes": [
-                "main",
-                "util"
-              ],
-              "edges": {
-                "main": [
-                  "util"
-                ]
-              }
-            }"""
-        )
-        actual = serializer.to_json(deps)
-        self.assertEqual(expected, actual)
-
-    def test_graphviz_serialize(self):
-        deps = generators.DependencyDescriptor()
-        deps.add_node("main")
-        deps.add_node("util")
-        deps.add_node("belize")
-        deps.add_node("femme")
-        deps.add_edge("main", "util")
-        deps.add_edge("main", "belize")
-        deps.add_edge("util", "femme")
-        deps.add_edge("femme", "main")
-        expected = textwrap.dedent(
-            """\
-            digraph G {
-                "main" -> "util"
-                "main" -> "belize"
-                "util" -> "femme"
-                "femme" -> "main"
-            }"""
-        )
-        actual = serializer.to_graphviz_dot(deps)
-        self.assertEqual(expected, actual)
 
     def test_io_module(self):
         """io modue has built-in dependencies on _io, _abc and import inside try-catch blocks
@@ -162,6 +90,71 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
             "xml.parsers", actual["nodes"], "xml.parsers is an empty module, so nobody should be dependent on it"
         )
         self.assertCountEqual(actual["nodes"], expectedNodes)
+
+    def test_imported_names(self):
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import os
+                import pathlib as pl
+                import os.path
+                import sys, abc
+                from time import thread_time
+
+                import other
+                from utils import print_hello
+                from utils import print_different_hello as diff
+                from other import SomeGood, SomeDifferent as Diff
+
+                print("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "other.py",
+            textwrap.dedent(
+                """
+                class SomeGood:
+                    def __init__(self, name):
+                        self.name = name
+
+
+                class SomeDifferent:
+                    def __init__(self, name_other):
+                        self.name = name_other
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "utils.py",
+            textwrap.dedent(
+                """
+                def print_hello():
+                    print("Hello")
+
+                def print_different_hello():
+                    print("Hello")
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+
+        project: Project = parse_project(test_main)
+        self.assertIsNotNone(project)
+        self.assertIsNotNone(project.get_syntax_tree("os"))
+        self.assertIsNotNone(project.get_syntax_tree("pathlib"))
+        self.assertIsNotNone(project.get_syntax_tree("ntpath"))  # os.path gets "renamed"
+        self.assertIsNone(project.get_syntax_tree("sys"))  # builtin
+        self.assertIsNotNone(project.get_syntax_tree("abc"))
+        self.assertIsNone(project.get_syntax_tree("time"))  # builtin
+
+        self.assertIsNotNone(project.get_syntax_tree("utils"))
+        self.assertIsNotNone(project.get_syntax_tree("other"))
 
     def test_argparse_module(self):
         """argparse module has 2 interesting scenarios:
