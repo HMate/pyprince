@@ -108,18 +108,26 @@ class ProjectParser:
             mod.add_submodule(sub_id)
         for imp in from_imports:
             if imp.package_name is not None:
-                sub_id = self.finder.find_module(imp.package_name, mod)
-                mod.add_submodule(sub_id)
+                package_id = self.finder.find_module(imp.package_name, mod)
+                if package_id is None or (package_id.spec is None) or (package_id.spec.origin is None):
+                    mod.add_submodule(package_id)
+                    continue
+                module_candidate = f"{imp.package_name}.{imp.target}"
+                sub_id = self.finder.find_child_module(module_candidate, package_id.name, package_id.spec.origin)
+                if sub_id is None:
+                    mod.add_submodule(package_id)
+                else:
+                    mod.add_submodule(sub_id)
             else:
                 if imp.relative_level == 1:
-                    sub_id = self.finder.find_relative_module(imp.target, mod)
+                    sub_id = self.finder.find_child_module_from_parent(imp.target, mod)
                     if sub_id is None:
                         # the imported name is not considered a module at this point
                         # But for dot imports this means this module depends on its parent package
-                        if self.finder.is_package_module(mod):
+                        if self.finder.is_package_module(mod.path):
                             # we are in a package module, and we searched inside ourselves, no additional deps
                             continue
-                        parent_name = self.finder.get_parent_package_name(mod)
+                        parent_name = self.finder.get_parent_package_name(mod.name)
                         sub_id = self.finder.find_module(parent_name)
                 else:
                     # TODO: Handle .., ... etc relative imports

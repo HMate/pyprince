@@ -31,7 +31,7 @@ class ModuleFinder:
         # If a module is relative, or a true child of the current module, we have to resolve its name by keeping track of the current module name
         # First see if the module exists under the parent path. This handles shadowed and relative imports.
         if (parent_module is not None) and ("." not in module_name):
-            module = self.find_relative_module(module_name, parent_module)
+            module = self.find_child_module_from_parent(module_name, parent_module)
             if module is not None:
                 return module
 
@@ -49,11 +49,15 @@ class ModuleFinder:
         sub_id = ModuleIdentifier(spec.name, spec)
         return sub_id
 
-    def find_relative_module(self, module_name: str, parent_module: Module) -> Optional[ModuleIdentifier]:
-        """Searches for a relative module under parent_module. Returns None if there were no submodule found with the given name."""
+    def find_child_module_from_parent(self, module_name: str, parent_module: Module) -> Optional[ModuleIdentifier]:
+        """Searches for a child module under parent_module. Returns None if there were no submodule found with the given name."""
         if parent_module.path is None:
             return None
-        parent_file = Path(parent_module.path)
+        return self.find_child_module(module_name, parent_module.name, parent_module.path)
+
+    def find_child_module(self, module_name: str, parent_name: str, parent_path: str) -> Optional[ModuleIdentifier]:
+        """Searches for a module relative to parent_file. Returns None if there were no submodule found with the given name."""
+        parent_file = Path(parent_path)
         search_path = parent_file.parent.resolve()
         spec = self.find_module_under_path(module_name, [str(search_path)])
         if spec is None:
@@ -63,27 +67,24 @@ class ModuleFinder:
             logger.trace(f"Found toplevel module {module_name} - {spec.name} - under top level path {search_path}")
             return ModuleIdentifier(spec.name, spec)
         # Otherwise we have to resolve the parent module name.
-        is_parent_package = self.is_package_module(parent_module)
+        is_parent_package = self.is_package_module(parent_path)
         if is_parent_package:
-            logger.trace(f"Found submodule {module_name} - {parent_module.name} > {spec.name}")
-            return ModuleIdentifier(f"{parent_module.name}.{spec.name}", spec)
+            logger.trace(f"Found submodule {module_name} - {parent_name} > {spec.name}")
+            return ModuleIdentifier(f"{parent_name}.{spec.name}", spec)
         # there should be a parent part, we throw away the last part
-        parent = self.get_parent_package_name(parent_module)
-        logger.trace(
-            f"Found sibling module {module_name} - {parent} > {spec.name} from {parent_module.name} : {parent_file}"
-        )
+        parent = self.get_parent_package_name(parent_name)
+        logger.trace(f"Found sibling module {module_name} - {parent} > {spec.name} from {parent_name} : {parent_file}")
         # If parent_module.path endswith .__init__.py we are okay. Otherwise we have to deduce who is the real parent.
         return ModuleIdentifier(f"{parent}.{spec.name}", spec)
 
-    def is_package_module(self, module: Module) -> bool:
-        """Return true if module is a package module, as in it can contain submodules."""
-        if module.path is None:
+    def is_package_module(self, module_path: Optional[str]) -> bool:
+        """Return true if module is a package module, meaning it has an __init__ file and it can contain submodules."""
+        if module_path is None:
             return False
-        parent_file = Path(module.path)
-        return parent_file.stem == "__init__"
+        return Path(module_path).stem == "__init__"
 
-    def get_parent_package_name(self, module: Module) -> str:
-        return module.name.rpartition(".")[0]
+    def get_parent_package_name(self, module_name: str) -> str:
+        return module_name.rpartition(".")[0]
 
     def find_spec(self, module_name: str) -> Optional[ModuleSpec]:
         """Wrapper around importlib.util.find_spec to find location of module by its full name."""

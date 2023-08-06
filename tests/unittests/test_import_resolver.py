@@ -270,7 +270,7 @@ class TestImportResolver(PyPrinceTestCase):
         self.assertEqual(project.get_module("reltest").submodules[0].name, "reltest.impl")
         self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
 
-    def test_skipping_non_module_import(self):
+    def test_skipping_non_module_dot_import(self):
         """if a from dot import contains an alias to a non-module name, it should be skipped"""
         test_name = Path(self._testMethodName)
         gen = PackageGenerator()
@@ -308,7 +308,7 @@ class TestImportResolver(PyPrinceTestCase):
         project: Project = parse_project(test_main)
         self.assertEqual(project.get_module("reltest.impl").submodules[0].name, "reltest")
 
-    def test_resolving_from_import_submodule_(self):
+    def test_resolving_from_import_submodule(self):
         """if we import with 'from package' a regular module, only the imported submodule
         should be in the dependencies and the empty parent package should be skipped"""
         test_name = Path(self._testMethodName)
