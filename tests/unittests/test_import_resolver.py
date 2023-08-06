@@ -33,6 +33,90 @@ class TestImportResolver(PyPrinceTestCase):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()
 
+    def test_import_module(self):
+        """Test importing a simple local module."""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import sub
+                sub.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "sub.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self._assert_module_path(project.get_module("sub"), self.test_root / test_name / "sub.py")
+
+    def test_import_package(self):
+        """Test importing a simple local package."""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import sub
+                sub.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "sub" / "__init__.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self._assert_module_path(project.get_module("sub"), self.test_root / test_name / "sub/__init__.py")
+
+    def test_import_from_module(self):
+        """Test importing with from module import syntax."""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                from sub import say
+                say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "sub.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self._assert_module_path(project.get_module("sub"), self.test_root / test_name / "sub.py")
+
     def test_hiding_toplevel_import(self):
         """Test importing a package that exist in the stdlib as a subdirectory from the entrypoint works.
         It should shadow the builtin logging module."""
@@ -61,9 +145,7 @@ class TestImportResolver(PyPrinceTestCase):
 
         test_main = self.test_root / test_name / "main.py"
         project: Project = parse_project(test_main)
-        log_module = project.get_module("logging")
-        assert log_module is not None and log_module.path is not None
-        self.assertEqual(Path(log_module.path), self.test_root / test_name / "logging/__init__.py")
+        self._assert_module_path(project.get_module("logging"), self.test_root / test_name / "logging/__init__.py")
 
     def test_relative_import(self):
         """Test relative import from package"""
@@ -252,7 +334,7 @@ class TestImportResolver(PyPrinceTestCase):
             textwrap.dedent(
                 """
                 def say(msg):
-                    print(fixed_message + msg)
+                    print(msg)
                 """
             ).lstrip(),
         )

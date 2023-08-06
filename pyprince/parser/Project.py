@@ -34,6 +34,10 @@ class Module:
     def __post_init__(self):
         self.name = self.id.name
 
+    def add_submodule(self, submodule: ModuleIdentifier):
+        if submodule not in self.submodules:
+            self.submodules.append(submodule)
+
 
 @dataclass
 class Project:
