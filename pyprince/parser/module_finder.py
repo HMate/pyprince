@@ -27,6 +27,22 @@ class ModuleFinder:
     def find_module(self, module_name: str, parent_module: Optional[Module] = None) -> ModuleIdentifier:
         """Searches for a module with the given name.
         It first looks under the given parent package for a relative module, then with the builtin finder.
+        If the module is not found creates an empty module with the given name.
+        """
+        mod_id = self.try_find_module(module_name, parent_module)
+        if mod_id is None:
+            if parent_module is not None:
+                logger.warning(
+                    f"Could not resolve path to submodule {module_name} from module {parent_module.name}({parent_module.path})"
+                )
+            else:
+                logger.warning(f"Could not resolve path to submodule {module_name}")
+            mod_id = ModuleIdentifier(module_name)
+        return mod_id
+
+    def try_find_module(self, module_name: str, parent_module: Optional[Module] = None) -> Optional[ModuleIdentifier]:
+        """Searches for a module with the given name.
+        It first looks under the given parent package for a relative module, then with the builtin finder.
         """
         # If a module is relative, or a true child of the current module, we have to resolve its name by keeping track of the current module name
         # First see if the module exists under the parent path. This handles shadowed and relative imports.
@@ -37,14 +53,7 @@ class ModuleFinder:
 
         spec = self.find_spec(module_name)
         if spec is None:
-            if parent_module is not None:
-                logger.warning(
-                    f"Could not resolve path to submodule {module_name} from module {parent_module.name}({parent_module.path})"
-                )
-            else:
-                logger.warning(f"Could not resolve path to submodule {module_name}")
-            sub_id = ModuleIdentifier(module_name)
-            return sub_id
+            return None
         logger.trace(f"Resolved module {spec.name} from {module_name} to {spec.origin}")
         sub_id = ModuleIdentifier(spec.name, spec)
         return sub_id
@@ -58,6 +67,11 @@ class ModuleFinder:
     def find_child_module(self, module_name: str, parent_name: str, parent_path: str) -> Optional[ModuleIdentifier]:
         """Searches for a module relative to parent_file. Returns None if there were no submodule found with the given name."""
         parent_file = Path(parent_path)
+
+        if (not module_name.startswith(".")) and ("." in module_name) and (not self.is_package_module(parent_path)):
+            # We are looking for a submodule, but the given parent module is not a package, so we wont find a module.
+            return None
+
         search_path = parent_file.parent.resolve()
         spec = self.find_module_under_path(module_name, [str(search_path)])
         if spec is None:

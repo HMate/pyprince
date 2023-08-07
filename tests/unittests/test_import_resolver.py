@@ -346,6 +346,37 @@ class TestImportResolver(PyPrinceTestCase):
         self.assertEqual(len(main.submodules), 1)
         self.assertEqual(main.submodules[0].name, "reltest.impl")
 
+    def test_resolving_from_import_module_with_same_name(self):
+        """If we import with 'from package' an object, with the same name as the module,
+        check we depend on the correct module."""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                from reltest import reltest
+                reltest("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest.py",
+            textwrap.dedent(
+                """
+                def reltest(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        main = project.get_module("main")
+        self.assertEqual(len(main.submodules), 1)
+        self.assertEqual(main.submodules[0].name, "reltest")
+
     # TODO: test: from .. import util
     # TODO: test: from asd import *
 
