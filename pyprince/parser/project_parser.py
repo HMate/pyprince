@@ -109,7 +109,7 @@ class ProjectParser:
         for imp in from_imports:
             if imp.package_name is not None:
                 package_id = self.finder.find_module(imp.package_name, mod)
-                if package_id is None or (package_id.spec is None) or (package_id.spec.origin is None):
+                if (package_id.spec is None) or (package_id.spec.origin is None):
                     mod.add_submodule(package_id)
                     continue
                 module_candidate = f"{imp.package_name}.{imp.target}"

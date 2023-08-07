@@ -4,7 +4,6 @@ from pathlib import Path
 import sys
 from typing import Optional, Sequence
 
-from attr import has
 
 from pyprince.logger import logger
 from pyprince.parser.Project import Module, ModuleIdentifier
