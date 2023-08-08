@@ -43,6 +43,10 @@ class ModuleFinder:
         """Searches for a module with the given name.
         It first looks under the given parent package for a relative module, then with the builtin finder.
         """
+
+        if module_name == "__main__":
+            return ModuleIdentifier("__main__")
+
         # If a module is relative, or a true child of the current module, we have to resolve its name by keeping track of the current module name
         # First see if the module exists under the parent path. This handles shadowed and relative imports.
         if (parent_module is not None) and ("." not in module_name):

@@ -74,6 +74,11 @@ class ProjectParser:
 
     def _parse_module_unchecked(self, module_id: ModuleIdentifier) -> Module:
         logger.info(f"Parsing module {module_id.name}")
+        if module_id.name == "__main__":
+            # __main__ module is technically the currently loaded top module, 
+            # but we dont have any reasons right now to deal with that.
+            mod = Module(module_id, None, None)
+            return mod
         spec = self.finder.find_spec(module_id.name) if module_id.spec is None else module_id.spec
         if spec is None or spec.origin is None:
             # I guess there can be multiple reasons.
