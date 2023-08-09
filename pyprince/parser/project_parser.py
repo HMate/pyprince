@@ -121,16 +121,17 @@ class ProjectParser:
             if (
                 (package_id.spec is None)
                 or (not self.finder.is_package_module(package_id.spec.origin))
-                or imp.target == "*"
+                or imp.targets == STAR_IMPORT
             ):
                 mod.add_submodule(package_id)
                 continue
-            module_candidate = f"{package_id.name}.{imp.target}"
-            sub_id = self.finder.try_find_top_level_module(module_candidate)
-            if sub_id is None:
-                mod.add_submodule(package_id)
-            else:
-                mod.add_submodule(sub_id)
+            for target in imp.targets:
+                module_candidate = f"{package_id.name}.{target}"
+                sub_id = self.finder.try_find_top_level_module(module_candidate)
+                if sub_id is None:
+                    mod.add_submodule(package_id)
+                else:
+                    mod.add_submodule(sub_id)
         return mod
 
     def _extract_module_import_names(
@@ -158,7 +159,6 @@ class ProjectParser:
                 # - from foo.bar -> module is an Attribute and relative is empty
                 assert isinstance(import_expr, libcst.ImportFrom)
                 step_level = len(import_expr.relative)
-                from_import_descs: List[FromImportDescription] = []
                 module_name = None
                 if isinstance(import_expr.module, libcst.Attribute):
                     module_name = root_cst.code_for_node(import_expr.module)
@@ -166,13 +166,13 @@ class ProjectParser:
                     module_name = import_expr.module.value
 
                 if isinstance(import_expr.names, collections.abc.Sequence):
-                    for alias in import_expr.names:
-                        desc = FromImportDescription(module_name, alias.evaluated_name, step_level)
-                        if desc not in package_imports:
-                            from_imports.append(desc)
+                    targets = [alias.evaluated_name for alias in import_expr.names]
+                    desc = FromImportDescription(module_name, targets, step_level)
+                    if desc not in from_imports:
+                        from_imports.append(desc)
                 else:
-                    desc = FromImportDescription(module_name, "*", step_level)
-                    if desc not in package_imports:
+                    desc = FromImportDescription(module_name, STAR_IMPORT, step_level)
+                    if desc not in from_imports:
                         from_imports.append(desc)
 
         return package_imports, from_imports
@@ -185,6 +185,9 @@ class ImportDescription:
     package_name: str
 
 
+STAR_IMPORT = "*"
+
+
 @dataclass(eq=True, frozen=True)
 class FromImportDescription:
     """ex: from package_name import target
@@ -193,7 +196,7 @@ class FromImportDescription:
     """
 
     package_name: Optional[str]
-    target: str
+    targets: Union[str, List[str]]
     relative_level: Optional[int] = None
 
     def is_relative_import(self) -> bool:
