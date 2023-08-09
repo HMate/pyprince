@@ -117,8 +117,8 @@ class TestImportResolver(PyPrinceTestCase):
         project: Project = parse_project(test_main)
         self._assert_module_path(project.get_module("sub"), self.test_root / test_name / "sub.py")
 
-    def test_import_submodule(self):
-        """Test importing with from module import syntax."""
+    def test_import_submodule_with_absolute_name(self):
+        """Test importing a submodule with an absolute module name."""
         test_name = Path(self._testMethodName)
         gen = PackageGenerator()
         gen.add_file(
@@ -130,13 +130,7 @@ class TestImportResolver(PyPrinceTestCase):
                 """
             ).lstrip(),
         )
-        gen.add_file(
-            test_name / "sub" / "__init__.py",
-            textwrap.dedent(
-                """
-                """
-            ).lstrip(),
-        )
+        gen.add_file(test_name / "sub" / "__init__.py", "")
         gen.add_file(
             test_name / "sub" / "subsub.py",
             textwrap.dedent(
@@ -152,6 +146,41 @@ class TestImportResolver(PyPrinceTestCase):
         project: Project = parse_project(test_main)
         self._assert_module_path(project.get_module("sub.subsub"), self.test_root / test_name / "sub/subsub.py")
         self._assert_module_depends_on(project.get_module("main"), "sub.subsub")
+
+    def test_import_submodule_with_long_absolute_name(self):
+        """Test importing a submodule with an absolute module name with more then one levels."""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import sub.subsub.moresub.evenmore
+                sub.subsub.moresub.evenmore.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(test_name / "sub" / "__init__.py", "")
+        gen.add_file(test_name / "sub" / "subsub" / "__init__.py", "")
+        gen.add_file(test_name / "sub" / "subsub" / "moresub" / "__init__.py", "")
+        gen.add_file(
+            test_name / "sub" / "subsub" / "moresub" / "evenmore" / "__init__.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self._assert_module_path(
+            project.get_module("sub.subsub.moresub.evenmore"),
+            self.test_root / test_name / "sub/subsub/moresub/evenmore/__init__.py",
+        )
+        self._assert_module_depends_on(project.get_module("main"), "sub.subsub.moresub.evenmore")
 
     def test_hiding_toplevel_import(self):
         """Test importing a package that exist in the stdlib as a subdirectory from the entrypoint works.
@@ -358,13 +387,7 @@ class TestImportResolver(PyPrinceTestCase):
                 """
             ).lstrip(),
         )
-        gen.add_file(
-            test_name / "reltest" / "__init__.py",
-            textwrap.dedent(
-                """
-                """
-            ).lstrip(),
-        )
+        gen.add_file(test_name / "reltest" / "__init__.py", "")
         gen.add_file(
             test_name / "reltest" / "impl.py",
             textwrap.dedent(
@@ -411,8 +434,103 @@ class TestImportResolver(PyPrinceTestCase):
         project: Project = parse_project(test_main)
         self._assert_module_depends_on(project.get_module("main"), "reltest")
 
-    # TODO: test: from .. import util
-    # TODO: test: from asd import *
+    def test_multidot_import(self):
+        """Test is multiple dots for relative imports work."""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import reltest.sub
+                reltest.sub.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(test_name / "reltest" / "__init__.py", "")
+        gen.add_file(
+            test_name / "reltest" / "sub" / "__init__.py",
+            textwrap.dedent(
+                """
+                from ..sayer import say
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "sayer.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self._assert_module_depends_on(project.get_module("reltest.sub"), "reltest.sayer")
+
+    def test_relative_sub_import(self):
+        """Test relative import with a complex package name works."""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import reltest.rootsub
+                reltest.rootsub.say_hello("main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(test_name / "reltest" / "__init__.py", "")
+        gen.add_file(
+            test_name / "reltest" / "rootsub.py",
+            textwrap.dedent("""from .sometest.sub import say_hello""").lstrip(),
+        )
+        gen.add_file(test_name / "reltest" / "sometest" / "__init__.py", "")
+        gen.add_file(
+            test_name / "reltest" / "sometest" / "sub.py",
+            textwrap.dedent(
+                """
+                def say_hello(msg):
+                    print("hello " + msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self._assert_module_depends_on(project.get_module("reltest.rootsub"), "reltest.sometest.sub")
+
+    def test_star_import(self):
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                from reltest import *
+                say("main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "reltest" / "__init__.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(fixed_message + msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self._assert_module_depends_on(project.get_module("main"), "reltest")
 
     def _assert_module_path(self, module: Optional[Module], expected_path: Path):
         assert module is not None and module.path is not None

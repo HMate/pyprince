@@ -85,12 +85,7 @@ class ProjectParser:
             # One reason is when the import is platform specific. For example pwd is unix only
             mod = Module(module_id, None, None)
             return mod
-        if (
-            (spec.origin in ["built-in", "frozen"])
-            or (spec.origin.endswith(".pyd"))
-            or (spec.origin.endswith(".pyc"))
-            or (spec.origin.endswith(".pyo"))
-        ):
+        if not self.finder.is_parsable_origin(spec.origin):
             mod = Module(module_id, spec.origin, None)
             return mod
 
@@ -112,32 +107,29 @@ class ProjectParser:
             sub_id = self.finder.find_top_level_module(imp.package_name)
             mod.add_submodule(sub_id)
         for imp in from_imports:
-            if imp.package_name is not None:
-                package_id = self.finder.find_module(imp.package_name, mod)
-                if (package_id.spec is None) or (package_id.spec.origin is None):
-                    mod.add_submodule(package_id)
+            if imp.is_relative_import():
+                assert imp.relative_level is not None
+                package_id = self.finder.find_relative_module(imp.package_name, imp.relative_level, module_id)
+                if package_id is None:
                     continue
-                module_candidate = f"{imp.package_name}.{imp.target}"
-                sub_id = self.finder.find_child_module(module_candidate, package_id.name, package_id.spec.origin)
-                if sub_id is None:
-                    mod.add_submodule(package_id)
-                else:
-                    mod.add_submodule(sub_id)
             else:
-                if imp.relative_level == 1:
-                    sub_id = self.finder.find_child_module_from_parent(imp.target, mod)
-                    if sub_id is None:
-                        # the imported name is not considered a module at this point
-                        # But for dot imports this means this module depends on its parent package
-                        if self.finder.is_package_module(mod.path):
-                            # we are in a package module, and we searched inside ourselves, no additional deps
-                            continue
-                        parent_name = self.finder.get_parent_package_name(mod.name)
-                        sub_id = self.finder.find_module(parent_name)
-                else:
-                    # TODO: Handle .., ... etc relative imports
-                    logger.warning(f"Unhandled relative import level {imp.relative_level} for {imp} in {mod.name}")
+                if imp.package_name is None:
+                    logger.warning(f"Empty import name for an absolute import - {imp}")
                     continue
+                package_id = self.finder.find_top_level_module(imp.package_name)
+
+            if (
+                (package_id.spec is None)
+                or (not self.finder.is_package_module(package_id.spec.origin))
+                or imp.target == "*"
+            ):
+                mod.add_submodule(package_id)
+                continue
+            module_candidate = f"{package_id.name}.{imp.target}"
+            sub_id = self.finder.try_find_top_level_module(module_candidate)
+            if sub_id is None:
+                mod.add_submodule(package_id)
+            else:
                 mod.add_submodule(sub_id)
         return mod
 
@@ -172,8 +164,6 @@ class ProjectParser:
                     module_name = root_cst.code_for_node(import_expr.module)
                 elif isinstance(import_expr.module, libcst.Name):
                     module_name = import_expr.module.value
-                else:
-                    logger.warning(f"Did not handle import - {import_expr}")
 
                 if isinstance(import_expr.names, collections.abc.Sequence):
                     for alias in import_expr.names:
@@ -181,7 +171,9 @@ class ProjectParser:
                         if desc not in package_imports:
                             from_imports.append(desc)
                 else:
-                    logger.warning(f"Unhandled dot import - {import_expr}")
+                    desc = FromImportDescription(module_name, "*", step_level)
+                    if desc not in package_imports:
+                        from_imports.append(desc)
 
         return package_imports, from_imports
 
