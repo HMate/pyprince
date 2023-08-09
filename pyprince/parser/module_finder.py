@@ -22,9 +22,59 @@ class ModuleFinder:
 
     def update_toplevel_module_paths(self, paths: Sequence[str]) -> None:
         self._top_level_paths = [Path(p).resolve() for p in paths]
+        self._top_level_path_strings = [str(p) for p in self._top_level_paths]
+
+    def find_top_level_module(self, module_name: str) -> ModuleIdentifier:
+        """Searches for a top_level module with the given name. If the module is not found in sys.path,
+        the builtin importlib is used to find it.
+        If the module is not found creates an empty module with the given name.
+        """
+        mod_id = self.try_find_top_level_module(module_name)
+
+        if mod_id is None:
+            logger.warning(f"Could not resolve path to top-level module {module_name}")
+            return ModuleIdentifier(module_name)
+        assert mod_id.spec is not None
+        logger.trace(f"Resolved module {mod_id.name} from {module_name} to {mod_id.spec.origin}")
+        return mod_id
+
+    def try_find_top_level_module(self, module_name: str) -> Optional[ModuleIdentifier]:
+        """Searches for a top_level module with the given name. If the module is not found in sys.path,
+        the builtin importlib is used to find it. If the module is not found return None.
+        """
+        spec = None
+        # submodule names (ie module.sub) are not handled right now, so just piggyback on the builtin finder
+        if "." not in module_name:
+            spec = self.find_module_under_path(module_name, self._top_level_path_strings)
+
+        if spec is None:
+            spec = self.find_spec(module_name)
+            if spec is None:
+                return None
+
+        mod_id = ModuleIdentifier(spec.name, spec)
+        return mod_id
+
+    def find_relative_module(
+        self, module_name: str, relative_level: int, parent_module: Optional[Module] = None
+    ) -> ModuleIdentifier:
+        """Searches for a relative module with the given name.
+        It first looks under the given parent package for a relative module, then with the builtin finder.
+        If the module is not found creates an empty module with the given name.
+        """
+        mod_id = self.try_find_module(module_name, parent_module)
+        if mod_id is None:
+            if parent_module is not None:
+                logger.warning(
+                    f"Could not resolve path to submodule {module_name} from module {parent_module.name}({parent_module.path})"
+                )
+            else:
+                logger.warning(f"Could not resolve path to submodule {module_name}")
+            mod_id = ModuleIdentifier(module_name)
+        return mod_id
 
     def find_module(self, module_name: str, parent_module: Optional[Module] = None) -> ModuleIdentifier:
-        """Searches for a module with the given name.
+        """Searches for a relative module with the given name.
         It first looks under the given parent package for a relative module, then with the builtin finder.
         If the module is not found creates an empty module with the given name.
         """
@@ -43,10 +93,6 @@ class ModuleFinder:
         """Searches for a module with the given name.
         It first looks under the given parent package for a relative module, then with the builtin finder.
         """
-
-        if module_name == "__main__":
-            return ModuleIdentifier("__main__")
-
         # If a module is relative, or a true child of the current module, we have to resolve its name by keeping track of the current module name
         # First see if the module exists under the parent path. This handles shadowed and relative imports.
         if (parent_module is not None) and ("." not in module_name):
@@ -119,7 +165,10 @@ class ModuleFinder:
             return None
 
     def find_module_under_path(self, name: str, path: Optional[Sequence[str]] = None) -> Optional[ModuleSpec]:
-        """Look for module under a list of filesystem paths."""
+        """Look for module under a list of filesystem paths.
+        Note that in case 'name' is a complex name (ie module.sub) this function will
+        throw away the parent part and only lloks for the sub part.
+        """
 
         if self.path_finder is None:
             return None

@@ -75,7 +75,7 @@ class ProjectParser:
     def _parse_module_unchecked(self, module_id: ModuleIdentifier) -> Module:
         logger.info(f"Parsing module {module_id.name}")
         if module_id.name == "__main__":
-            # __main__ module is technically the currently loaded top module, 
+            # __main__ module is technically the currently loaded top module,
             # but we dont have any reasons right now to deal with that.
             mod = Module(module_id, None, None)
             return mod
@@ -109,7 +109,7 @@ class ProjectParser:
         # TODO: If submodule is just an alias from an import, we will have to interpret code, or load the parent module.
         module_imports, from_imports = self._extract_module_import_names(cst)
         for imp in module_imports:
-            sub_id = self.finder.find_module(imp.package_name, mod)
+            sub_id = self.finder.find_top_level_module(imp.package_name)
             mod.add_submodule(sub_id)
         for imp in from_imports:
             if imp.package_name is not None:
@@ -165,35 +165,24 @@ class ProjectParser:
                 # - from foo -> module is a Name and relative is empty
                 # - from foo.bar -> module is an Attribute and relative is empty
                 assert isinstance(import_expr, libcst.ImportFrom)
+                step_level = len(import_expr.relative)
                 from_import_descs: List[FromImportDescription] = []
+                module_name = None
                 if isinstance(import_expr.module, libcst.Attribute):
-                    if isinstance(import_expr.names, collections.abc.Sequence):
-                        for alias in import_expr.names:
-                            from_import_descs.append(
-                                FromImportDescription(root_cst.code_for_node(import_expr.module), alias.evaluated_name)
-                            )
-                    else:
-                        logger.warning(f"Unhandled import star - {import_expr}")
+                    module_name = root_cst.code_for_node(import_expr.module)
                 elif isinstance(import_expr.module, libcst.Name):
-                    if isinstance(import_expr.names, collections.abc.Sequence):
-                        for alias in import_expr.names:
-                            from_import_descs.append(
-                                FromImportDescription(import_expr.module.value, alias.evaluated_name)
-                            )
-                    else:
-                        logger.warning(f"Unhandled import star - {import_expr}")
-                elif import_expr.module is None and import_expr.relative is not None:
-                    step_level = len(import_expr.relative)
-                    if isinstance(import_expr.names, collections.abc.Sequence):
-                        for alias in import_expr.names:
-                            from_import_descs.append(FromImportDescription(None, alias.evaluated_name, step_level))
-                    else:
-                        logger.warning(f"Unhandled dot import - {import_expr}")
+                    module_name = import_expr.module.value
                 else:
                     logger.warning(f"Did not handle import - {import_expr}")
-                for desc in from_import_descs:
-                    if desc not in package_imports:
-                        from_imports.append(desc)
+
+                if isinstance(import_expr.names, collections.abc.Sequence):
+                    for alias in import_expr.names:
+                        desc = FromImportDescription(module_name, alias.evaluated_name, step_level)
+                        if desc not in package_imports:
+                            from_imports.append(desc)
+                else:
+                    logger.warning(f"Unhandled dot import - {import_expr}")
+
         return package_imports, from_imports
 
 
@@ -214,3 +203,6 @@ class FromImportDescription:
     package_name: Optional[str]
     target: str
     relative_level: Optional[int] = None
+
+    def is_relative_import(self) -> bool:
+        return self.relative_level is not None and self.relative_level > 0

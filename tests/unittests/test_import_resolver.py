@@ -117,6 +117,42 @@ class TestImportResolver(PyPrinceTestCase):
         project: Project = parse_project(test_main)
         self._assert_module_path(project.get_module("sub"), self.test_root / test_name / "sub.py")
 
+    def test_import_submodule(self):
+        """Test importing with from module import syntax."""
+        test_name = Path(self._testMethodName)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import sub.subsub
+                sub.subsub.say("hello main")
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "sub" / "__init__.py",
+            textwrap.dedent(
+                """
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_name / "sub" / "subsub.py",
+            textwrap.dedent(
+                """
+                def say(msg):
+                    print(msg)
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        test_main = self.test_root / test_name / "main.py"
+        project: Project = parse_project(test_main)
+        self._assert_module_path(project.get_module("sub.subsub"), self.test_root / test_name / "sub/subsub.py")
+        self._assert_module_depends_on(project.get_module("main"), "sub.subsub")
+
     def test_hiding_toplevel_import(self):
         """Test importing a package that exist in the stdlib as a subdirectory from the entrypoint works.
         It should shadow the builtin logging module."""
@@ -373,9 +409,7 @@ class TestImportResolver(PyPrinceTestCase):
 
         test_main = self.test_root / test_name / "main.py"
         project: Project = parse_project(test_main)
-        main = project.get_module("main")
-        self.assertEqual(len(main.submodules), 1)
-        self.assertEqual(main.submodules[0].name, "reltest")
+        self._assert_module_depends_on(project.get_module("main"), "reltest")
 
     # TODO: test: from .. import util
     # TODO: test: from asd import *
@@ -383,6 +417,12 @@ class TestImportResolver(PyPrinceTestCase):
     def _assert_module_path(self, module: Optional[Module], expected_path: Path):
         assert module is not None and module.path is not None
         self.assertEqual(Path(module.path), expected_path)
+
+    def _assert_module_depends_on(self, module: Optional[Module], *expected_module_names: str):
+        assert module is not None
+        self.assertGreaterEqual(len(module.submodules), len(expected_module_names))
+        submodules = [sub.name for sub in module.submodules]
+        self.assertCountEqual(submodules, expected_module_names)
 
 
 if __name__ == "__main__":

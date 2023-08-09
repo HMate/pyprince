@@ -1,11 +1,12 @@
 import collections.abc
 import unittest
-from typing import List
+from typing import List, TypeVar
 
 from pyprince.logger import logger, get_log_folder
 
 g_log_should_rotate = True
 
+T = TypeVar('T')
 
 class PyPrinceTestCase(unittest.TestCase):
     """Contains additional asserts for usage in pyprince tests"""
@@ -52,7 +53,7 @@ class PyPrinceTestCase(unittest.TestCase):
         standardMsg = f"These element can be found multiple times: {elemCount}"
         self.fail(self._formatMessage(msg, standardMsg))
 
-    def assertContains(self, container: collections.abc.Collection, members: collections.abc.Collection, msg=None):
+    def assertContains(self, container: collections.abc.Collection[T], members: collections.abc.Collection[T], msg=None):
         missing = set()
         for member in members:
             if member not in container:
