@@ -6,4 +6,5 @@ To release new version:
 - Publish beta release: `npm publish --tag beta`
 - Promote to latest version:
   - `npm dist-tag add @mhidvegi/pyprince@<version> latest`
+- Optionally remove beta tag
   - `npm dist-tag rm @mhidvegi/pyprince@<version> beta`
