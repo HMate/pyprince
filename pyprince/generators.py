@@ -52,6 +52,9 @@ def _describe_deps(proj: Project) -> DependencyDescriptor:
 
 
 def _describe_deps_from_imports(proj: Project) -> DependencyDescriptor:
+    """
+    Looks through modules that are loaded in and add them to descriptor.
+    """
     result = DependencyDescriptor()
     modules = proj.get_loaded_modules()
     if not modules:

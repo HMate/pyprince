@@ -1,4 +1,3 @@
-from os.path import dirname
 from enum import Enum
 import pathlib
 
@@ -24,6 +23,10 @@ def main(
     logger.init()
     logger.logger.info(f"Starting pyprince at {pathlib.Path().absolute()}")
 
+    if not check_entrypoint(entrypoint):
+        typer.echo("Entrypoint check failed, exiting.")
+        return
+
     mod = parser.parse_project(entrypoint)
     if draw_modules:
         desc = generators.describe_module_dependencies(mod)
@@ -34,3 +37,9 @@ def main(
         typer.echo(result)
     else:
         typer.echo(generators.generate_code(mod))
+
+def check_entrypoint(entrypoint: pathlib.Path):
+    if not entrypoint.exists():
+        typer.echo(f"Entrypoint does not exists: {entrypoint}")
+        return False
+    return True
