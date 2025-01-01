@@ -1,14 +1,12 @@
-from pathlib import Path
 import textwrap
 
-import tests.testutils as testutils
-from tests.testutils import PackageGenerator, PyPrinceTestCase
-from pyprince.parser import parse_project, Project, Module, ModuleIdentifier
+from tests.testutils import PyPrinceTestCase
+from pyprince.parser import Project, Module, ModuleIdentifier, Package
 from pyprince import generators, serializer
 
 
 class TestDescribeModuleDependency(PyPrinceTestCase):
-    def test_single_dependency(self):        
+    def test_single_dependency(self):
         project = Project()
         main_mod = Module(ModuleIdentifier("main", None), "main.py", None)
         util_mod = Module(ModuleIdentifier("util", None), "util.py", None)
@@ -28,9 +26,17 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         project.add_root_module(main_mod.name)
         project.add_module(main_mod)
         project.add_module(os_mod)
+        project.add_package(Package("main", None))
+        project.add_package(Package("stdlib", None))
+        project.get_package("main").add_module(main_mod.id)
+        project.get_package("stdlib").add_module(os_mod.id)
         actual = generators.describe_module_dependencies(project)
 
-        expected = {"nodes": ["main", "os"], "packages": {"main": ["main"], "stdlib": ["os"]}, "edges": {"main": ["os"]}}
+        expected = {
+            "nodes": ["main", "os"],
+            "packages": {"main": ["main"], "stdlib": ["os"]},
+            "edges": {"main": ["os"]},
+        }
         self.assertDictEqual(expected, actual.to_dict())
 
     def test_json_serialize(self):

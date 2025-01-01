@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from importlib.machinery import ModuleSpec
-from types import ModuleType
-from typing import Iterable, Optional, Union, List
+from types import FunctionType, ModuleType
+from typing import Iterable, Optional, Set, Union, List
 import inspect
 
 import libcst
@@ -40,12 +40,24 @@ class Module:
 
 
 @dataclass
+class Package:
+    name: str
+    path: Union[str, None]  # None means we dont know the physical location of the module
+    modules: Set[ModuleIdentifier] = field(default_factory=set)
+
+    def add_module(self, module: ModuleIdentifier):
+        if module not in self.modules:
+            self.modules.add(module)
+
+
+@dataclass
 class Project:
     # The mapping of aliases to importLocations
     _loaded_modules: Optional[ModuleType] = None
     _root_modules: List[str] = field(default_factory=list)
     _modules: dict[str, Module] = field(default_factory=dict)
     _syntax_trees: dict[str, libcst.Module] = field(default_factory=dict)
+    _packages: dict[str, Package] = field(default_factory=dict)
 
     def add_root_module(self, module_name: str):
         self._root_modules.append(module_name)
@@ -64,7 +76,16 @@ class Project:
     def get_module(self, module_name: str) -> Optional[Module]:
         return self._modules.get(module_name, None)
 
-    def get_modules(self):
+    def add_package(self, package: Package):
+        self._packages[package.name] = package
+
+    def list_packages(self) -> Iterable[str]:
+        return self._packages.keys()
+
+    def get_package(self, package_name: str) -> Optional[Package]:
+        return self._packages.get(package_name, None)
+
+    def get_modules(self) -> Iterable[str]:
         return self._modules.keys()
 
     def add_syntax_tree(self, module_name: str, st: libcst.Module):
@@ -115,7 +136,7 @@ class Project:
             return None
 
     def find_module_for_function(self, func_name: str) -> tuple[Optional[str], Optional[libcst.Module]]:
-        functions: List[tuple[str, function]] = inspect.getmembers(self._loaded_modules, inspect.isfunction)
+        functions: List[tuple[str, FunctionType]] = inspect.getmembers(self._loaded_modules, inspect.isfunction)
         for name, func in functions:
             if name == func_name:
                 return func.__module__, self.get_syntax_tree(func.__module__)

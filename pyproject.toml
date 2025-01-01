@@ -29,7 +29,18 @@ line-length = 120
 
 [tool.pytest.ini_options]
 minversion = "7.4"
-addopts="--capture=no --color=yes"
-testpaths = [
-    "tests"
+addopts = "--capture=no --color=yes"
+testpaths = ["tests"]
+
+[tool.pyright]
+# Docs: https://github.com/microsoft/pyright/blob/main/docs/configuration.md#type-check-rule-overrides
+include = ["pyprince", "tests"]
+exclude = [".mypy_cache", ".pytest_cache"]
+
+pythonVersion = "3.9"
+pythonPlatform = "All"
+
+executionEnvironments = [
+    { root = "tests", reportOptionalMemberAccess = "none" },
+    { root = "src" },
 ]

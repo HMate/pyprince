@@ -1,12 +1,13 @@
 import collections.abc
 import unittest
-from typing import List, TypeVar
+from typing import Iterable, List, Optional, TypeVar
 
 from pyprince.logger import logger, get_log_folder
 
 g_log_should_rotate = True
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 class PyPrinceTestCase(unittest.TestCase):
     """Contains additional asserts for usage in pyprince tests"""
@@ -34,6 +35,9 @@ class PyPrinceTestCase(unittest.TestCase):
             )
         logger.info(f"**** Starting test {methodName} ****")
 
+    def current_test_name(self):
+        return self.id().split(".")[2]
+
     def assertListElementsAreUnique(self, container: List, msg=None):
         uniques = set(container)
         if len(uniques) == len(container):
@@ -53,7 +57,9 @@ class PyPrinceTestCase(unittest.TestCase):
         standardMsg = f"These element can be found multiple times: {elemCount}"
         self.fail(self._formatMessage(msg, standardMsg))
 
-    def assertContains(self, container: collections.abc.Collection[T], members: collections.abc.Collection[T], msg=None):
+    def assertContains(
+        self, container: collections.abc.Collection[T], members: collections.abc.Collection[T], msg=None
+    ):
         missing = set()
         for member in members:
             if member not in container:
@@ -67,3 +73,12 @@ class PyPrinceTestCase(unittest.TestCase):
             f"These members are missing from container: {repr(missing)}\noriginal container: {repr(container)}"
         )
         self.fail(self._formatMessage(msg, standardMsg))
+
+    def assertUnorderedEqual(self, container: Optional[Iterable], other_container: Optional[Iterable]):
+        if container is None:
+            self.fail(f"First container should not be None")
+        if other_container is None:
+            self.fail(f"Second container should not be None")
+        members1 = set(container)
+        members2 = set(other_container)
+        self.assertSetEqual(members1, members2)

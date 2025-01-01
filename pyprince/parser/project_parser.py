@@ -42,9 +42,6 @@ class ProjectParser:
 
         root_name = entry_file.stem
         root: Module = self._parse_module(ModuleIdentifier(root_name))
-        if root is None:
-            sys.path = sys.path[1:]
-            return self.proj
 
         self.proj.add_root_module(root.name)
         self.proj.add_module(root)
@@ -85,7 +82,7 @@ class ProjectParser:
             # but we dont have any reasons right now to deal with that.
             mod = Module(module_id, None, None)
             return mod
-        
+
         module_path = self.find_module_path(module_id)
         if module_path is None:
             # I guess there can be multiple reasons.
@@ -112,7 +109,7 @@ class ProjectParser:
     def _resolve_module_imports(self, mod: Module):
         if mod.syntax_tree is None:
             return
-        
+
         # TODO: If submodule is just an alias from an import, we will have to interpret code, or load the parent module.
         module_imports, from_imports = self._extract_module_import_names(mod.syntax_tree)
         for imp in module_imports:
@@ -187,12 +184,12 @@ class ProjectParser:
                         from_imports.append(desc)
 
         return package_imports, from_imports
-    
+
     def is_part_of_stdlib(self, module: Module):
         if module.path is None or module.path in [constants.BUILTIN, constants.FROZEN]:
             return True
         module_path = Path(module.path)
-        
+
         if module_path.is_relative_to(sys.prefix) or module_path.is_relative_to(sys.base_prefix):
             if module_path.is_relative_to(self.get_site_packages_path()):
                 return False
@@ -202,13 +199,12 @@ class ProjectParser:
     @staticmethod
     def get_site_packages_path():
         return sysconfig.get_path("platlib")
-    
+
     def find_module_path(self, module_id: ModuleIdentifier):
         spec = self.finder.find_spec(module_id.name) if module_id.spec is None else module_id.spec
         if spec is None:
             return None
         return spec.origin
-
 
 
 @dataclass(eq=True, frozen=True)

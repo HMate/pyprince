@@ -1,7 +1,7 @@
 from types import ModuleType
 import inspect
 from collections import defaultdict
-from typing import List
+from typing import Iterable, List, Set
 
 from pyprince.parser import get_module_name
 from pyprince.parser import Project, Module
@@ -11,6 +11,7 @@ class DependencyDescriptor:
     def __init__(self) -> None:
         self.nodes: List[str] = []
         self.edges: dict[str, List[str]] = defaultdict(list)
+        self.packages: dict[str, Set[str]] = defaultdict(set)
 
     def add_node(self, node: str):
         self.nodes.append(node)
@@ -18,8 +19,14 @@ class DependencyDescriptor:
     def add_edge(self, root: str, sub: str):
         self.edges[root].append(sub)
 
+    def add_package(self, package: str, modules: Iterable[str]):
+        self.packages[package].update(modules)
+
     def to_dict(self):
-        return {"nodes": self.nodes, "edges": dict(self.edges)}
+        result = {"nodes": self.nodes, "edges": dict(self.edges)}
+        if len(self.packages) > 0:
+            result["packages"] = {k: list(v) for k, v in self.packages.items()}
+        return result
 
 
 def generate_code(proj: Project) -> str:
@@ -51,6 +58,12 @@ def _describe_deps(proj: Project) -> DependencyDescriptor:
             continue
         for sub in mod.submodules:
             result.add_edge(mod.name, sub.name)
+
+    for package_name in proj.list_packages():
+        package = proj.get_package(package_name)
+        if package is None:
+            continue
+        result.add_package(package_name, {m.name for m in package.modules})
 
     return result
 

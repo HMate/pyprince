@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import textwrap
 
@@ -38,7 +37,7 @@ class TestProjectParser(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
-        self.assertListEqual(list(project.get_modules()), ["main", "util"])
+        self.assertUnorderedEqual(project.get_modules(), ["main", "util"])
         self.assertEqual(project.get_module("main").submodules[0].name, "util")
 
     def test_parser_with_shallow_stdlib(self):
@@ -58,5 +57,26 @@ class TestProjectParser(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
-        self.assertListEqual(list(project.get_modules()), ["main", "os"])
+        self.assertUnorderedEqual(project.get_modules(), ["main", "os"])
         self.assertEqual(project.get_module("main").submodules[0].name, "os")
+
+    def test_package_parsing(self):
+        test_name = self.current_test_name()
+        gen = PackageGenerator()
+        gen.add_file(
+            Path(test_name) / "main.py",
+            textwrap.dedent(
+                """
+                import os
+
+                def main():
+                    print((["Mom", "Dad"], ["Grandpa", "Cousin"]))
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
+        self.assertUnorderedEqual(project.list_packages(), [test_name, "stdlib"])
+        self.assertUnorderedEqual(project.get_package(test_name).modules, ["main"])
+        self.assertUnorderedEqual(project.get_package("stdlib").modules, ["os"])
