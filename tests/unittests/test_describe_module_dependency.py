@@ -3,43 +3,34 @@ import textwrap
 
 import tests.testutils as testutils
 from tests.testutils import PackageGenerator, PyPrinceTestCase
-from pyprince.parser import parse_project, Project
+from pyprince.parser import parse_project, Project, Module, ModuleIdentifier
 from pyprince import generators, serializer
 
 
 class TestDescribeModuleDependency(PyPrinceTestCase):
-    def setUp(self):
-        self.test_root = testutils.get_test_scenarios_dir()
-        testutils.remove_imported_modules()
-
-    def test_single_dependency(self):
-        test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
-        gen.add_file(
-            test_name / "main.py",
-            textwrap.dedent(
-                """
-                from util import some_functionality
-
-                def main():
-                    some_functionality(["Mom", "Dad"], ["Grandpa", "Cousin"])
-                """
-            ).lstrip(),
-        )
-        gen.add_file(
-            test_name / "util.py",
-            textwrap.dedent(
-                """
-                def some_functionality(parents, relatives):
-                    print(f"Family: {parents + relatives}")
-                """
-            ).lstrip(),
-        )
-        gen.generate_files(self.test_root)
-
-        project: Project = parse_project(self.test_root / test_name / "main.py")
-        expected = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
+    def test_single_dependency(self):        
+        project = Project()
+        main_mod = Module(ModuleIdentifier("main", None), "main.py", None)
+        util_mod = Module(ModuleIdentifier("util", None), "util.py", None)
+        main_mod.add_submodule(util_mod.id)
+        project.add_root_module(main_mod.name)
+        project.add_module(main_mod)
+        project.add_module(util_mod)
         actual = generators.describe_module_dependencies(project)
+        expected = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
+        self.assertDictEqual(expected, actual.to_dict())
+
+    def test_describe_module_dependencies_with_packages(self):
+        project = Project()
+        main_mod = Module(ModuleIdentifier("main", None), "main.py", None)
+        os_mod = Module(ModuleIdentifier("os", None), "os.py", None)
+        main_mod.add_submodule(os_mod.id)
+        project.add_root_module(main_mod.name)
+        project.add_module(main_mod)
+        project.add_module(os_mod)
+        actual = generators.describe_module_dependencies(project)
+
+        expected = {"nodes": ["main", "os"], "packages": {"main": ["main"], "stdlib": ["os"]}, "edges": {"main": ["os"]}}
         self.assertDictEqual(expected, actual.to_dict())
 
     def test_json_serialize(self):

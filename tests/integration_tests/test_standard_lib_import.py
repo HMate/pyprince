@@ -9,7 +9,7 @@ from pyprince.parser import parse_project
 from pyprince import generators
 
 
-class TestImportResolver(PyPrinceTestCase):
+class TestStandardLibImportResolver(PyPrinceTestCase):
     """Collection of long running tests that import from the actual standard library."""
 
     def setUp(self):
@@ -32,7 +32,7 @@ class TestImportResolver(PyPrinceTestCase):
         )
         gen.generate_files(self.test_root)
 
-        project: Project = parse_project(self.test_root / test_name / "main.py")
+        project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=False)
         # fmt: off
         expected_nodes = [
             "main", "io", "abc", "_py_abc", "_io", "_abc", "_weakrefset", "_weakref", "types", "_collections_abc", 
@@ -179,11 +179,11 @@ class TestImportResolver(PyPrinceTestCase):
 
         test_main = self.test_root / test_name / "main.py"
 
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=True)
         self.assertIsNotNone(project)
         self.assertIsNotNone(project.get_syntax_tree("os"))
         self.assertIsNotNone(project.get_syntax_tree("pathlib"))
-        self.assertIsNotNone(project.get_syntax_tree("ntpath"))  # os.path gets "renamed"
+        self.assertIsNotNone(project.get_syntax_tree("os.path"))  # os.path <==> ntpath
         self.assertIsNone(project.get_syntax_tree("sys"))  # builtin
         self.assertIsNotNone(project.get_syntax_tree("abc"))
         self.assertIsNone(project.get_syntax_tree("time"))  # builtin
@@ -209,7 +209,7 @@ class TestImportResolver(PyPrinceTestCase):
         )
         gen.generate_files(self.test_root)
 
-        project: Project = parse_project(self.test_root / test_name / "main.py")
+        project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=False)
         expectedNodes = ["main", "argparse", "unicodedata", "pwd"]
         actual = generators.describe_module_dependencies(project).to_dict()
         self.assertContains(actual["nodes"], expectedNodes)

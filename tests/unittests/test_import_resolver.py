@@ -58,7 +58,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_path(project.get_module("sub"), self.test_root / test_name / "sub.py")
 
     def test_import_package(self):
@@ -86,7 +86,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_path(project.get_module("sub"), self.test_root / test_name / "sub/__init__.py")
 
     def test_import_from_module(self):
@@ -114,7 +114,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_path(project.get_module("sub"), self.test_root / test_name / "sub.py")
 
     def test_import_submodule_with_absolute_name(self):
@@ -143,7 +143,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_path(project.get_module("sub.subsub"), self.test_root / test_name / "sub/subsub.py")
         self._assert_module_depends_on(project.get_module("main"), "sub.subsub")
 
@@ -175,7 +175,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_path(
             project.get_module("sub.subsub.moresub.evenmore"),
             self.test_root / test_name / "sub/subsub/moresub/evenmore/__init__.py",
@@ -209,7 +209,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_path(project.get_module("logging"), self.test_root / test_name / "logging/__init__.py")
 
     def test_relative_import(self):
@@ -245,7 +245,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self.assertIsNotNone(project.get_module("reltest"))
         self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
 
@@ -292,7 +292,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self.assertIsNotNone(project.get_module("reltest"))
         self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
         self._assert_module_path(project.get_module("reltest.other"), self.test_root / test_name / "reltest/other.py")
@@ -331,7 +331,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self.assertEqual(project.get_module("reltest").submodules[0].name, "reltest.impl")
         self._assert_module_path(project.get_module("reltest.impl"), self.test_root / test_name / "reltest/impl.py")
 
@@ -370,7 +370,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self.assertEqual(project.get_module("reltest.impl").submodules[0].name, "reltest")
 
     def test_resolving_from_import_submodule(self):
@@ -400,7 +400,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         main = project.get_module("main")
         self.assertEqual(len(main.submodules), 1)
         self.assertEqual(main.submodules[0].name, "reltest.impl")
@@ -431,7 +431,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_depends_on(project.get_module("main"), "reltest")
 
     def test_multidot_import(self):
@@ -468,7 +468,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_depends_on(project.get_module("reltest.sub"), "reltest.sayer")
 
     def test_relative_sub_import(self):
@@ -502,7 +502,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_depends_on(project.get_module("reltest.rootsub"), "reltest.sometest.sub")
 
     def test_star_import(self):
@@ -529,7 +529,7 @@ class TestImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         test_main = self.test_root / test_name / "main.py"
-        project: Project = parse_project(test_main)
+        project: Project = parse_project(test_main, shallow_stdlib=False)
         self._assert_module_depends_on(project.get_module("main"), "reltest")
 
     def _assert_module_path(self, module: Optional[Module], expected_path: Path):

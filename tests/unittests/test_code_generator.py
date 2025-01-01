@@ -22,7 +22,7 @@ class TestCodeGenerator(PyPrinceTestCase):
         )
         gen.generate_files(self.test_root)
 
-        project: Project = parse_project(self.test_root / test_name / "main.py")
+        project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=False)
         expected = """print("Hello pyparser")"""
         actual = generators.generate_code(project)
         self.assertEqual(expected, actual)

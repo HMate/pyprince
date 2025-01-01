@@ -6,6 +6,7 @@ from typing import Dict, Optional, Sequence, Tuple
 
 from pyprince.logger import logger
 from pyprince.parser.Project import ModuleIdentifier
+from pyprince.parser import constants
 
 
 class ModuleFinder:
@@ -27,7 +28,7 @@ class ModuleFinder:
 
     def is_parsable_origin(self, module_origin: str) -> bool:
         return not (
-            (module_origin in ["built-in", "frozen"])
+            (module_origin in [constants.BUILTIN, constants.FROZEN])
             or (module_origin.endswith(".pyd"))
             or (module_origin.endswith(".pyc"))
             or (module_origin.endswith(".pyo"))

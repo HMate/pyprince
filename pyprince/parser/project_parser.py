@@ -1,27 +1,31 @@
 from dataclasses import dataclass
+import queue
 import sys
 import os
 from pathlib import Path
+import sysconfig
 from typing import Optional, Tuple, Union, List
 import collections.abc
 
 import libcst
 import libcst.matchers as cstm
 
+from pyprince.parser import constants
 from pyprince.parser.module_finder import ModuleFinder
 from pyprince.parser.Project import ModuleIdentifier, Project, Module
 from pyprince.logger import logger
 
 
-def parse_project_new(entry_file: Path) -> Project:
-    parser = ProjectParser()
+def parse_project_new(entry_file: Path, shallow_stdlib: bool) -> Project:
+    parser = ProjectParser(shallow_stdlib)
     return parser.parse_project_from_entry_script(entry_file)
 
 
 class ProjectParser:
-    def __init__(self):
+    def __init__(self, shallow_stdlib: bool):
         self.proj = Project()
         self.finder = ModuleFinder()
+        self.shallow_stdlib = shallow_stdlib
 
     def parse_project_from_entry_script(self, entry_file: Path) -> Project:
         logger.info(f"Parsing started from {entry_file.absolute()}")
@@ -44,22 +48,24 @@ class ProjectParser:
 
         self.proj.add_root_module(root.name)
         self.proj.add_module(root)
+        self._resolve_module_imports(root)
+        remaining_modules = queue.SimpleQueue()
+        for sub in root.submodules:
+            remaining_modules.put(sub)
 
-        if root.syntax_tree is not None:
-            self.proj.add_syntax_tree(root.name, root.syntax_tree)
-        remaining_modules = set(root.submodules)
-
-        while len(remaining_modules) > 0:
-            next_module: ModuleIdentifier = remaining_modules.pop()
+        while not remaining_modules.empty():
+            next_module: ModuleIdentifier = remaining_modules.get()
             mod = self._parse_module(next_module)
             if mod is None:
                 continue
             self.proj.add_module(mod)
-            if mod.syntax_tree is not None:
-                self.proj.add_syntax_tree(mod.name, mod.syntax_tree)
+            if self.shallow_stdlib and self.is_part_of_stdlib(mod):
+                continue
+
+            self._resolve_module_imports(mod)
             for sub in mod.submodules:
                 if not self.proj.has_module(sub.name):
-                    remaining_modules.add(sub)
+                    remaining_modules.put(sub)
         sys.path = sys.path[1:]
         logger.success(f"Parsing finished for {entry_file.absolute()}")
         return self.proj
@@ -79,37 +85,43 @@ class ProjectParser:
             # but we dont have any reasons right now to deal with that.
             mod = Module(module_id, None, None)
             return mod
-        spec = self.finder.find_spec(module_id.name) if module_id.spec is None else module_id.spec
-        if spec is None or spec.origin is None:
+        
+        module_path = self.find_module_path(module_id)
+        if module_path is None:
             # I guess there can be multiple reasons.
             # One reason is when the import is platform specific. For example pwd is unix only
             mod = Module(module_id, None, None)
             return mod
-        if not self.finder.is_parsable_origin(spec.origin):
-            mod = Module(module_id, spec.origin, None)
+        if not self.finder.is_parsable_origin(module_path):
+            mod = Module(module_id, module_path, None)
             return mod
 
         if module_id.name == "pydoc_data.topics":
             # TODO: Right now libcst crashes on this file when parsing or when enumerating imports.
             # For now it does not affect us if we just skip the file.
             # In the future we may want to switch to parso/ast module, or hope it gets fixed.
-            mod = Module(module_id, spec.origin, None)
+            mod = Module(module_id, module_path, None)
             return mod
 
-        logger.debug(f"Parsing module {module_id.name} from {spec.origin}")
-        content = Path(spec.origin).read_bytes()  # TODO: DI FileLoader
+        logger.debug(f"Parsing module {module_id.name} from {module_path}")
+        content = Path(module_path).read_bytes()  # TODO: DI FileLoader
         cst: libcst.Module = libcst.parse_module(content)
-        mod = Module(module_id, spec.origin, cst)
+        mod = Module(module_id, module_path, cst)
+        return mod
 
+    def _resolve_module_imports(self, mod: Module):
+        if mod.syntax_tree is None:
+            return
+        
         # TODO: If submodule is just an alias from an import, we will have to interpret code, or load the parent module.
-        module_imports, from_imports = self._extract_module_import_names(cst)
+        module_imports, from_imports = self._extract_module_import_names(mod.syntax_tree)
         for imp in module_imports:
             sub_id = self.finder.find_top_level_module(imp.package_name)
             mod.add_submodule(sub_id)
         for imp in from_imports:
             if imp.is_relative_import():
                 assert imp.relative_level is not None
-                package_id = self.finder.find_relative_module(imp.package_name, imp.relative_level, module_id)
+                package_id = self.finder.find_relative_module(imp.package_name, imp.relative_level, mod.id)
                 if package_id is None:
                     continue
             else:
@@ -132,7 +144,6 @@ class ProjectParser:
                     mod.add_submodule(package_id)
                 else:
                     mod.add_submodule(sub_id)
-        return mod
 
     def _extract_module_import_names(
         self, root_cst: libcst.Module
@@ -176,6 +187,28 @@ class ProjectParser:
                         from_imports.append(desc)
 
         return package_imports, from_imports
+    
+    def is_part_of_stdlib(self, module: Module):
+        if module.path is None or module.path in [constants.BUILTIN, constants.FROZEN]:
+            return True
+        module_path = Path(module.path)
+        
+        if module_path.is_relative_to(sys.prefix) or module_path.is_relative_to(sys.base_prefix):
+            if module_path.is_relative_to(self.get_site_packages_path()):
+                return False
+            return True
+        return False
+
+    @staticmethod
+    def get_site_packages_path():
+        return sysconfig.get_path("platlib")
+    
+    def find_module_path(self, module_id: ModuleIdentifier):
+        spec = self.finder.find_spec(module_id.name) if module_id.spec is None else module_id.spec
+        if spec is None:
+            return None
+        return spec.origin
+
 
 
 @dataclass(eq=True, frozen=True)

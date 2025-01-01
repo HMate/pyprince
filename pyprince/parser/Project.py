@@ -55,6 +55,8 @@ class Project:
 
     def add_module(self, module: Module):
         self._modules[module.name] = module
+        if module.syntax_tree is not None:
+            self.add_syntax_tree(module.name, module.syntax_tree)
 
     def has_module(self, module_name: str) -> bool:
         return module_name in self._modules

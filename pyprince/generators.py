@@ -29,9 +29,13 @@ def generate_code(proj: Project) -> str:
 
 def describe_module_dependencies(proj: Project) -> DependencyDescriptor:
     """
-    Generates a json which describes all the dependencies between modules.
-    The json contains node names, and edges between nodes.
+    Generates a struct which describes all the dependencies between modules.
+
+    The DependencyDescriptor struct contains node names, and edges between nodes.
+    The nodes can be package names and module names (a package is roughly a folder full of modules).
+
     The node names are unique.
+    TODO: Add option to group modules into packages
     """
     return _describe_deps(proj)
     # return _describe_deps_from_imports(proj)

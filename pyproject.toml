@@ -26,3 +26,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
+
+[tool.pytest.ini_options]
+minversion = "7.4"
+addopts="--capture=no --color=yes"
+testpaths = [
+    "tests"
+]
