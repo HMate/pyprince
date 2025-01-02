@@ -63,7 +63,7 @@ def _describe_deps(proj: Project) -> DependencyDescriptor:
         package = proj.get_package(package_name)
         if package is None:
             continue
-        result.add_package(package_name, {m.name for m in package.modules})
+        result.add_package(package_name, package.modules)
 
     return result
 

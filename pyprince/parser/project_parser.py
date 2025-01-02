@@ -12,7 +12,7 @@ import libcst.matchers as cstm
 
 from pyprince.parser import constants
 from pyprince.parser.module_finder import ModuleFinder
-from pyprince.parser.Project import ModuleIdentifier, Project, Module
+from pyprince.parser.Project import ModuleIdentifier, Package, Project, Module
 from pyprince.logger import logger
 
 
@@ -45,6 +45,11 @@ class ProjectParser:
 
         self.proj.add_root_module(root.name)
         self.proj.add_module(root)
+
+        root_package = Package(entry_file.parent.stem, str(entry_file.parent))
+        self.proj.add_package(root_package)
+        root_package.add_module(root.id)
+
         self._resolve_module_imports(root)
         remaining_modules = queue.SimpleQueue()
         for sub in root.submodules:
@@ -56,8 +61,14 @@ class ProjectParser:
             if mod is None:
                 continue
             self.proj.add_module(mod)
-            if self.shallow_stdlib and self.is_part_of_stdlib(mod):
-                continue
+
+            if self._is_part_of_stdlib(mod):
+                self._add_to_stdlib_package(mod)
+                if self.shallow_stdlib:
+                    continue
+            else:
+                package = self._find_package(mod)
+                package.add_module(mod.id)
 
             self._resolve_module_imports(mod)
             for sub in mod.submodules:
@@ -185,7 +196,7 @@ class ProjectParser:
 
         return package_imports, from_imports
 
-    def is_part_of_stdlib(self, module: Module):
+    def _is_part_of_stdlib(self, module: Module):
         if module.path is None or module.path in [constants.BUILTIN, constants.FROZEN]:
             return True
         module_path = Path(module.path)
@@ -195,6 +206,21 @@ class ProjectParser:
                 return False
             return True
         return False
+
+    def _add_to_stdlib_package(self, module: Module):
+        if not self.proj.has_package(constants.STDLIB_PACKAGE_NAME):
+            self.proj.add_package(Package(constants.STDLIB_PACKAGE_NAME, sys.base_prefix))
+        self.proj.get_package(constants.STDLIB_PACKAGE_NAME).add_module(module.id)  # pyright: ignore
+
+    def _find_package(self, module: Module) -> Package:
+        if module.path is None:
+            raise RuntimeError(f"There was no path for non-std module: {module.name}")
+        module_path = Path(module.path)
+        package_name = module_path.parent.stem
+
+        if self.proj.has_package(package_name):
+            return self.proj.get_package(package_name)  # pyright: ignore
+        return Package(package_name, None)
 
     @staticmethod
     def get_site_packages_path():

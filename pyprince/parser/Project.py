@@ -43,11 +43,11 @@ class Module:
 class Package:
     name: str
     path: Union[str, None]  # None means we dont know the physical location of the module
-    modules: Set[ModuleIdentifier] = field(default_factory=set)
+    modules: Set[str] = field(default_factory=set)
 
     def add_module(self, module: ModuleIdentifier):
         if module not in self.modules:
-            self.modules.add(module)
+            self.modules.add(module.name)
 
 
 @dataclass
@@ -78,6 +78,9 @@ class Project:
 
     def add_package(self, package: Package):
         self._packages[package.name] = package
+
+    def has_package(self, package_name: str) -> bool:
+        return package_name in self._packages
 
     def list_packages(self) -> Iterable[str]:
         return self._packages.keys()

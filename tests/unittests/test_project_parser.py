@@ -11,8 +11,8 @@ class TestProjectParser(PyPrinceTestCase):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()
 
-    def test_single_dependency(self):
-        test_name = Path(self._testMethodName)
+    def test_parsing_single_dependency(self):
+        test_name = Path(self.current_test_name())
         gen = PackageGenerator()
         gen.add_file(
             test_name / "main.py",
@@ -41,7 +41,7 @@ class TestProjectParser(PyPrinceTestCase):
         self.assertEqual(project.get_module("main").submodules[0].name, "util")
 
     def test_parser_with_shallow_stdlib(self):
-        test_name = Path(self._testMethodName)
+        test_name = Path(self.current_test_name())
         gen = PackageGenerator()
         gen.add_file(
             test_name / "main.py",
@@ -60,7 +60,7 @@ class TestProjectParser(PyPrinceTestCase):
         self.assertUnorderedEqual(project.get_modules(), ["main", "os"])
         self.assertEqual(project.get_module("main").submodules[0].name, "os")
 
-    def test_package_parsing(self):
+    def test_parsing_package_from_stdlib(self):
         test_name = self.current_test_name()
         gen = PackageGenerator()
         gen.add_file(
@@ -80,3 +80,35 @@ class TestProjectParser(PyPrinceTestCase):
         self.assertUnorderedEqual(project.list_packages(), [test_name, "stdlib"])
         self.assertUnorderedEqual(project.get_package(test_name).modules, ["main"])
         self.assertUnorderedEqual(project.get_package("stdlib").modules, ["os"])
+
+    def test_parsing_package_from_local(self):
+        test_name = self.current_test_name()
+        test_path = Path(test_name)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_path / "main.py",
+            textwrap.dedent(
+                """
+                from util import some_functionality
+
+                def main():
+                    some_functionality(["Mom", "Dad"], ["Grandpa", "Cousin"])
+                """
+            ).lstrip(),
+        )
+        gen.add_file(
+            test_path / "util.py",
+            textwrap.dedent(
+                """
+                def some_functionality(parents, relatives):
+                    print(f"Family: {parents + relatives}")
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
+        self.assertUnorderedEqual(project.list_packages(), [test_name])
+        self.assertUnorderedEqual(project.get_package(test_name).modules, ["main", "util"])
+
+    # TODO: Add tests for parsing 3rd party packages, packages within packages etc..
