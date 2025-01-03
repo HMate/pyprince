@@ -19,6 +19,7 @@ black = { version = "^20.8b1", allow-prereleases = true }
 pytest = "^7.4"
 pylint = "^2.8.3"
 shiv = "^1.0.3"
+pyhamcrest = "^2.1.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -41,6 +42,6 @@ pythonVersion = "3.9"
 pythonPlatform = "All"
 
 executionEnvironments = [
-    { root = "tests", reportOptionalMemberAccess = "none" },
+    { root = "tests", reportOptionalMemberAccess = "none", reportCallIssue = "none", reportArgumentType = "none" },
     { root = "src" },
 ]

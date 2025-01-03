@@ -2,6 +2,7 @@ import textwrap
 import sys
 from pathlib import Path
 
+from hamcrest import assert_that, has_items
 from tests import testutils
 from tests.testutils import PackageGenerator, PyPrinceTestCase
 from pyprince.parser.Project import Module, Project
@@ -213,3 +214,24 @@ class TestStandardLibImportResolver(PyPrinceTestCase):
         expectedNodes = ["main", "argparse", "unicodedata", "pwd"]
         actual = generators.describe_module_dependencies(project).to_dict()
         self.assertContains(actual["nodes"], expectedNodes)
+
+    def test_parsing_package_from_site_packages(self):
+        test_name = self.current_test_name()
+        test_path = Path(test_name)
+        gen = PackageGenerator()
+        gen.add_file(
+            test_path / "main.py",
+            textwrap.dedent(
+                """
+                import libcst 
+
+                def main():
+                    some_functionality(["Mom", "Dad"], ["Grandpa", "Cousin"])
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
+        assert_that(project.list_packages(), has_items(test_name, "libcst", "stdlib"))
+        assert_that(project.get_package("libcst").modules, has_items("libcst"))

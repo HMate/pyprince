@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import enum
 from importlib.machinery import ModuleSpec
 from types import FunctionType, ModuleType
 from typing import Iterable, Optional, Set, Union, List
@@ -39,10 +40,18 @@ class Module:
             self.submodules.append(submodule)
 
 
+class PackageType(enum.Enum):
+    Unknown = 0
+    Local = 1
+    Site = 2
+    StandardLib = 3
+
+
 @dataclass
 class Package:
     name: str
     path: Union[str, None]  # None means we dont know the physical location of the module
+    package_type: PackageType
     modules: Set[str] = field(default_factory=set)
 
     def add_module(self, module: ModuleIdentifier):

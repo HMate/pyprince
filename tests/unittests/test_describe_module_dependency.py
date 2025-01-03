@@ -1,7 +1,7 @@
 import textwrap
 
 from tests.testutils import PyPrinceTestCase
-from pyprince.parser import Project, Module, ModuleIdentifier, Package
+from pyprince.parser import Project, Module, ModuleIdentifier, Package, PackageType
 from pyprince import generators, serializer
 
 
@@ -26,8 +26,8 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         project.add_root_module(main_mod.name)
         project.add_module(main_mod)
         project.add_module(os_mod)
-        project.add_package(Package("main", None))
-        project.add_package(Package("stdlib", None))
+        project.add_package(Package("main", None, PackageType.Local))
+        project.add_package(Package("stdlib", None, PackageType.StandardLib))
         project.get_package("main").add_module(main_mod.id)
         project.get_package("stdlib").add_module(os_mod.id)
         actual = generators.describe_module_dependencies(project)

@@ -1,3 +1,5 @@
+STAR_IMPORT = "*"
+
 BUILTIN = "built-in"
 FROZEN = "frozen"
 
