@@ -3,7 +3,6 @@ import queue
 import sys
 import os
 from pathlib import Path
-import sysconfig
 from typing import Optional, Tuple, Union, List
 import collections.abc
 
@@ -49,7 +48,7 @@ class ProjectParser:
         self.proj.add_root_module(root.name)
         self.proj.add_module(root)
 
-        root_package = self.package_finder.find_package(root)
+        root_package: Package = self.package_finder.find_package(root)
         self.proj.add_package(root_package)
         root_package.add_module(root.id)
 
@@ -65,17 +64,9 @@ class ProjectParser:
                 continue
             self.proj.add_module(mod)
 
-            if self.package_finder.is_part_of_stdlib(mod):
-                self.package_finder.add_to_stdlib_package(mod)
-                if self.shallow_stdlib:
-                    continue
-            else:
-                package = self.package_finder.find_package(mod)
-                package.add_module(mod.id)
-                if not self.proj.has_package(package.name):
-                    self.proj.add_package(package)
-                if self.shallow_site_packages and package.package_type == PackageType.Site:
-                    continue
+            package = self._resolve_module_package(mod)
+            if self._does_shallow_parsing_apply(package):
+                continue
 
             self._resolve_module_imports(mod)
             for sub in mod.submodules:
@@ -123,6 +114,20 @@ class ProjectParser:
         cst: libcst.Module = libcst.parse_module(content)
         mod = Module(module_id, module_path, cst)
         return mod
+
+    def _resolve_module_package(self, mod: Module) -> Package:
+        package: Package = self.package_finder.find_package(mod)
+        package.add_module(mod.id)
+        if not self.proj.has_package(package.name):
+            self.proj.add_package(package)
+        return package
+
+    def _does_shallow_parsing_apply(self, package: Package) -> bool:
+        if self.shallow_stdlib and package.package_type == PackageType.StandardLib:
+            return True
+        elif self.shallow_site_packages and package.package_type == PackageType.Site:
+            return True
+        return False
 
     def _resolve_module_imports(self, mod: Module):
         if mod.syntax_tree is None:
