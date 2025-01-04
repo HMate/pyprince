@@ -38,6 +38,7 @@ def main(
     else:
         typer.echo(generators.generate_code(mod))
 
+
 def check_entrypoint(entrypoint: pathlib.Path):
     if not entrypoint.exists():
         typer.echo(f"Entrypoint does not exists: {entrypoint}")

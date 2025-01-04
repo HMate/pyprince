@@ -14,18 +14,34 @@ from pyprince.parser.module_finder import ModuleFinder
 from pyprince.parser.package_finder import PackageFinder
 from pyprince.parser.project import ModuleIdentifier, Package, PackageType, Project, Module
 from pyprince.logger import logger
+from pyprince.parser.project_cache import ProjectCache
 
 
-def parse_project_new(entry_file: Path, shallow_stdlib: bool, shallow_site_packages: bool) -> Project:
-    parser = ProjectParser(shallow_stdlib, shallow_site_packages)
+def parse_project(
+    entry_file: Path,
+    project_cache: Optional[ProjectCache] = None,
+    shallow_stdlib: bool = False,
+    shallow_site_packages: bool = False,
+) -> Project:
+    """
+    Parses in all the module files starting from an entry_file.
+    If project_cache is not None, modules will be loaded from there, instead of parsing them in from the filesystem.
+
+    When 'shallow_stdlib' param is true, we wont include the whole stdlib,
+    just the surface modules that other modules include.
+    When 'shallow_site_packages' is true, we include only the surface modules of packages that are in site-packages.
+    """
+    parser = ProjectParser(project_cache, shallow_stdlib, shallow_site_packages)
     return parser.parse_project_from_entry_script(entry_file)
 
 
 class ProjectParser:
-    def __init__(self, shallow_stdlib: bool, shallow_site_packages: bool):
+    def __init__(self, project_cache: Optional[ProjectCache], shallow_stdlib: bool, shallow_site_packages: bool):
         self.proj = Project()
         self.finder = ModuleFinder()
         self.package_finder = PackageFinder(self.proj)
+
+        self.project_cache = project_cache or ProjectCache()
         self.shallow_stdlib = shallow_stdlib
         self.shallow_site_packages = shallow_site_packages
 
@@ -59,16 +75,20 @@ class ProjectParser:
 
         while not remaining_modules.empty():
             next_module: ModuleIdentifier = remaining_modules.get()
-            mod = self._parse_module(next_module)
-            if mod is None:
-                continue
-            self.proj.add_module(mod)
+            cached_module = self.project_cache.find_in_cache(next_module)
+            if cached_module is None:
+                mod = self._parse_module(next_module)
+                if mod is None:
+                    continue
+                self.proj.add_module(mod)
+                self._resolve_module_imports(mod)
+            else:
+                mod = cached_module
 
             package = self._resolve_module_package(mod)
             if self._does_shallow_parsing_apply(package):
                 continue
 
-            self._resolve_module_imports(mod)
             for sub in mod.submodules:
                 if not self.proj.has_module(sub.name):
                     remaining_modules.put(sub)

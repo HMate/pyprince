@@ -7,10 +7,11 @@ from pyprince.parser.project import Module, Package, PackageType, Project
 
 
 class PackageFinder:
-    STDLIB_PACKAGE = Package(constants.STDLIB_PACKAGE_NAME, sys.base_prefix, PackageType.StandardLib)
-
     def __init__(self, project: Project) -> None:
         self.proj = project
+        self.STDLIB_PACKAGE = Package(
+            constants.STDLIB_PACKAGE_NAME, sysconfig.get_path("stdlib"), PackageType.StandardLib
+        )
 
     def find_package(self, module: Module) -> Package:
         if self._is_part_of_stdlib(module):
@@ -40,7 +41,7 @@ class PackageFinder:
             return True
         module_path = Path(module.path)
 
-        if module_path.is_relative_to(sys.prefix) or module_path.is_relative_to(sys.base_prefix):
+        if module_path.is_relative_to(sys.prefix) or module_path.is_relative_to(self.STDLIB_PACKAGE.path):  # type: ignore
             if module_path.is_relative_to(self.get_site_packages_path()):
                 return False
             return True
