@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tests import testutils
 from tests.testutils import PackageGenerator, PyPrinceTestCase
-from pyprince.parser.Project import Module, Project
+from pyprince.parser.project import Module, Project
 from pyprince.parser import parse_project
 
 # Python import possibilities:

@@ -5,7 +5,7 @@ import sys
 from typing import Dict, Optional, Sequence, Tuple
 
 from pyprince.logger import logger
-from pyprince.parser.Project import ModuleIdentifier
+from pyprince.parser.project import ModuleIdentifier
 from pyprince.parser import constants
 
 

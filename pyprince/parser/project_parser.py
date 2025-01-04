@@ -12,7 +12,8 @@ import libcst.matchers as cstm
 
 from pyprince.parser import constants
 from pyprince.parser.module_finder import ModuleFinder
-from pyprince.parser.Project import ModuleIdentifier, Package, PackageType, Project, Module
+from pyprince.parser.package_finder import PackageFinder
+from pyprince.parser.project import ModuleIdentifier, Package, PackageType, Project, Module
 from pyprince.logger import logger
 
 
@@ -25,6 +26,7 @@ class ProjectParser:
     def __init__(self, shallow_stdlib: bool, shallow_site_packages: bool):
         self.proj = Project()
         self.finder = ModuleFinder()
+        self.package_finder = PackageFinder(self.proj)
         self.shallow_stdlib = shallow_stdlib
         self.shallow_site_packages = shallow_site_packages
 
@@ -47,7 +49,7 @@ class ProjectParser:
         self.proj.add_root_module(root.name)
         self.proj.add_module(root)
 
-        root_package = self._find_package(root)
+        root_package = self.package_finder.find_package(root)
         self.proj.add_package(root_package)
         root_package.add_module(root.id)
 
@@ -63,12 +65,12 @@ class ProjectParser:
                 continue
             self.proj.add_module(mod)
 
-            if self._is_part_of_stdlib(mod):
-                self._add_to_stdlib_package(mod)
+            if self.package_finder.is_part_of_stdlib(mod):
+                self.package_finder.add_to_stdlib_package(mod)
                 if self.shallow_stdlib:
                     continue
             else:
-                package = self._find_package(mod)
+                package = self.package_finder.find_package(mod)
                 package.add_module(mod.id)
                 if not self.proj.has_package(package.name):
                     self.proj.add_package(package)
@@ -200,46 +202,6 @@ class ProjectParser:
                         from_imports.append(desc)
 
         return package_imports, from_imports
-
-    def _is_part_of_stdlib(self, module: Module):
-        if module.path is None or module.path in [constants.BUILTIN, constants.FROZEN]:
-            return True
-        module_path = Path(module.path)
-
-        if module_path.is_relative_to(sys.prefix) or module_path.is_relative_to(sys.base_prefix):
-            if module_path.is_relative_to(self.get_site_packages_path()):
-                return False
-            return True
-        return False
-
-    def _add_to_stdlib_package(self, module: Module):
-        if not self.proj.has_package(constants.STDLIB_PACKAGE_NAME):
-            self.proj.add_package(Package(constants.STDLIB_PACKAGE_NAME, sys.base_prefix, PackageType.StandardLib))
-        self.proj.get_package(constants.STDLIB_PACKAGE_NAME).add_module(module.id)  # pyright: ignore
-
-    def _find_package(self, module: Module) -> Package:
-        if module.path is None:
-            raise RuntimeError(f"There was no path for non-std module: {module.name}")
-        module_path = Path(module.path)
-        package_type = PackageType.Unknown
-
-        module_parts = module.name.split(".")
-        if len(module_parts) > 1:
-            package_name = module_parts[0]
-        elif module_path.is_relative_to(self.get_site_packages_path()):
-            package_name = module.name
-            package_type = PackageType.Site
-        else:
-            package_name = module_path.parent.stem
-            package_type = PackageType.Local
-
-        if self.proj.has_package(package_name):
-            return self.proj.get_package(package_name)  # pyright: ignore
-        return Package(package_name, str(module_path), package_type)
-
-    @staticmethod
-    def get_site_packages_path():
-        return sysconfig.get_path("platlib")
 
     def find_module_path(self, module_id: ModuleIdentifier):
         spec = self.finder.find_spec(module_id.name) if module_id.spec is None else module_id.spec

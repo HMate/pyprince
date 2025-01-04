@@ -8,15 +8,15 @@ import importlib, importlib.util
 
 import libcst
 
-from pyprince.parser.Project import Project
+from pyprince.parser.project import Project
 from pyprince.logger import logger
 
 
 def parse_project_by_imports(entry_file: Path) -> Project:
     """
-    "Parses" a python project by actually importing the modules and loading them in 
+    "Parses" a python project by actually importing the modules and loading them in
     with libcst.
-    TODO: This and generators._describe_deps_from_imports can probably be deleted, 
+    TODO: This and generators._describe_deps_from_imports can probably be deleted,
         as project_parser should be better.
     """
     modules = import_modules_recursively(entry_file)
