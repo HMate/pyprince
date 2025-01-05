@@ -35,7 +35,9 @@ class Module:
     def __post_init__(self):
         self.name = self.id.name
 
-    def add_submodule(self, submodule: ModuleIdentifier):
+    def add_submodule(self, submodule: Union[ModuleIdentifier, Module]):
+        if isinstance(submodule, Module):
+            submodule = submodule.id
         if submodule not in self.submodules:
             self.submodules.append(submodule)
 
@@ -54,7 +56,9 @@ class Package:
     package_type: PackageType
     modules: Set[str] = field(default_factory=set)
 
-    def add_module(self, module: ModuleIdentifier):
+    def add_module(self, module: Union[ModuleIdentifier, Module]):
+        if isinstance(module, Module):
+            module = module.id
         if module not in self.modules:
             self.modules.add(module.name)
 

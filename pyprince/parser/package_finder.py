@@ -10,7 +10,7 @@ class PackageFinder:
     def __init__(self, project: Project) -> None:
         self.proj = project
         self.STDLIB_PACKAGE = Package(
-            constants.STDLIB_PACKAGE_NAME, sysconfig.get_path("stdlib"), PackageType.StandardLib
+            constants.STDLIB_PACKAGE_NAME, PackageFinder.get_stdlib_path(), PackageType.StandardLib
         )
 
     def find_package(self, module: Module) -> Package:
@@ -50,3 +50,7 @@ class PackageFinder:
     @staticmethod
     def get_site_packages_path():
         return sysconfig.get_path("platlib")
+
+    @staticmethod
+    def get_stdlib_path():
+        return sysconfig.get_path("stdlib")

@@ -1,0 +1,2 @@
+class PyPrinceException(Exception):
+    pass

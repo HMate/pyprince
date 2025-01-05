@@ -155,8 +155,8 @@ class TestProjectParser(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         cache = ProjectCache()
-        os_module = test_utils.create_module("os", Path(sysconfig.get_path("stdlib")) / "os.py")
-        sys_module = test_utils.create_module("sys", Path(sysconfig.get_path("stdlib")) / "sys.py")
+        os_module = test_utils.create_module("os", testutils.stdlib_path() / "os.py")
+        sys_module = test_utils.create_module("sys", testutils.stdlib_path() / "sys.py")
         os_module.add_submodule(sys_module.id)
 
         cache.project.add_module(os_module)
