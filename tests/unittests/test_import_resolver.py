@@ -5,8 +5,8 @@ import unittest
 import textwrap
 from pathlib import Path
 
+from hamcrest import assert_that, contains_inanyorder, equal_to, greater_than_or_equal_to, not_none
 from tests import testutils
-from tests.testutils import PackageGenerator, PyPrinceTestCase
 from pyprince.parser.project import Module, Project
 from pyprince.parser import parse_project
 
@@ -28,7 +28,7 @@ from pyprince.parser import parse_project
 # import os, os.path as osp
 
 
-class TestImportResolver(PyPrinceTestCase):
+class TestImportResolver(testutils.PyPrinceTestCase):
     def setUp(self):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()
@@ -36,7 +36,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_import_module(self):
         """Test importing a simple local module."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -64,7 +64,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_import_package(self):
         """Test importing a simple local package."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -92,7 +92,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_import_from_module(self):
         """Test importing with from module import syntax."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -120,7 +120,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_import_submodule_with_absolute_name(self):
         """Test importing a submodule with an absolute module name."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -150,7 +150,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_import_submodule_with_long_absolute_name(self):
         """Test importing a submodule with an absolute module name with more then one levels."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -186,7 +186,7 @@ class TestImportResolver(PyPrinceTestCase):
         """Test importing a package that exist in the stdlib as a subdirectory from the entrypoint works.
         It should shadow the builtin logging module."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -215,7 +215,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_relative_import(self):
         """Test relative import from package"""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -252,7 +252,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_resolving_sibling_module_import(self):
         """Test if a submodules imports a sibling package their parents gets resolved correctly"""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -300,7 +300,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_import_from_dot(self):
         """Test if a submodules imports a sibling package their parents gets resolved correctly"""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -338,7 +338,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_skipping_non_module_dot_import(self):
         """if a from dot import contains an alias to a non-module name, it should be skipped"""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -377,7 +377,7 @@ class TestImportResolver(PyPrinceTestCase):
         """if we import with 'from package' a regular module, only the imported submodule
         should be in the dependencies and the empty parent package should be skipped"""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -409,7 +409,7 @@ class TestImportResolver(PyPrinceTestCase):
         """If we import with 'from package' an object, with the same name as the module,
         check we depend on the correct module."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -437,7 +437,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_multidot_import(self):
         """Test is multiple dots for relative imports work."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -474,7 +474,7 @@ class TestImportResolver(PyPrinceTestCase):
     def test_relative_sub_import(self):
         """Test relative import with a complex package name works."""
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -507,7 +507,7 @@ class TestImportResolver(PyPrinceTestCase):
 
     def test_star_import(self):
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -533,14 +533,16 @@ class TestImportResolver(PyPrinceTestCase):
         self._assert_module_depends_on(project.get_module("main"), "reltest")
 
     def _assert_module_path(self, module: Optional[Module], expected_path: Path):
-        assert module is not None and module.path is not None
-        self.assertEqual(Path(module.path), expected_path)
+        assert_that(module, not_none())
+        assert_that(module.path, not_none())
+        assert_that(Path(module.path), equal_to(expected_path))
 
     def _assert_module_depends_on(self, module: Optional[Module], *expected_module_names: str):
-        assert module is not None
-        self.assertGreaterEqual(len(module.submodules), len(expected_module_names))
+        assert_that(module, not_none())
+        assert_that(len(module.submodules), greater_than_or_equal_to(len(expected_module_names)))
+
         submodules = [sub.name for sub in module.submodules]
-        self.assertCountEqual(submodules, expected_module_names)
+        assert_that(submodules, contains_inanyorder(*submodules))
 
 
 if __name__ == "__main__":

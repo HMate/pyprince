@@ -2,27 +2,30 @@ import textwrap
 import sys
 from pathlib import Path
 
-from hamcrest import assert_that, has_items
+from hamcrest import assert_that, contains_inanyorder, has_item, has_items, is_, none, not_, not_none
 from tests import testutils
-from tests.testutils import PackageGenerator, PyPrinceTestCase
 from pyprince.parser.project import Module, Project
 from pyprince.parser import parse_project
 from pyprince import generators
+from pyprince.logger import logger
+
+from tests.testutils.matchers import all_unique
 
 
-class TestStandardLibImportResolver(PyPrinceTestCase):
+class TestStandardLibImportResolver(testutils.PyPrinceTestCase):
     """Collection of long running tests that import from the actual standard library."""
 
     def setUp(self):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()
+        logger.info(f"----- Starting test - {self.current_test_name()} ------")
 
     def test_io_module(self):
         """io modue has built-in dependencies on _io, _abc and import inside try-catch blocks
         We check if the parser gathers all deps correctly.
         """
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -114,22 +117,24 @@ class TestStandardLibImportResolver(PyPrinceTestCase):
                 ]
             )
 
-        # module dependency nodes should be unique.
         actual = generators.describe_module_dependencies(project).to_dict()
-        self.assertListElementsAreUnique(actual["nodes"])
-        self.maxDiff = None
-        print(actual["nodes"])
-        self.assertNotIn(
-            "concurrent", actual["nodes"], "concurrent is an empty module, so nobody should be dependent on it"
+        logger.debug(actual["nodes"])
+        assert_that(actual["nodes"], all_unique())
+        assert_that(
+            actual["nodes"],
+            not_(has_item("concurrent")),
+            "concurrent is an empty module, so nobody should be dependent on it",
         )
-        self.assertNotIn(
-            "xml.parsers", actual["nodes"], "xml.parsers is an empty module, so nobody should be dependent on it"
+        assert_that(
+            actual["nodes"],
+            not_(has_item("xml.parsers")),
+            "xml.parsers is an empty module, so nobody should be dependent on it",
         )
-        self.assertCountEqual(actual["nodes"], expected_nodes)
+        assert_that(actual["nodes"], contains_inanyorder(*expected_nodes))
 
     def test_imported_names(self):
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -181,16 +186,16 @@ class TestStandardLibImportResolver(PyPrinceTestCase):
         test_main = self.test_root / test_name / "main.py"
 
         project: Project = parse_project(test_main, shallow_stdlib=True)
-        self.assertIsNotNone(project)
-        self.assertIsNotNone(project.get_syntax_tree("os"))
-        self.assertIsNotNone(project.get_syntax_tree("pathlib"))
-        self.assertIsNotNone(project.get_syntax_tree("os.path"))  # os.path <==> ntpath
-        self.assertIsNone(project.get_syntax_tree("sys"))  # builtin
-        self.assertIsNotNone(project.get_syntax_tree("abc"))
-        self.assertIsNone(project.get_syntax_tree("time"))  # builtin
 
-        self.assertIsNotNone(project.get_syntax_tree("utils"))
-        self.assertIsNotNone(project.get_syntax_tree("other"))
+        assert_that(project, is_(not_none()))
+        assert_that(project.get_syntax_tree("os"), is_(not_none()))
+        assert_that(project.get_syntax_tree("pathlib"), is_(not_none()))
+        assert_that(project.get_syntax_tree("os.path"), is_(not_none()))  # os.path <==> ntpath
+        assert_that(project.get_syntax_tree("sys"), is_(none()), "sys is builtin, does not have syntaxtree")
+        assert_that(project.get_syntax_tree("abc"), is_(not_none()))
+        assert_that(project.get_syntax_tree("time"), is_(none()), "time is builtin, does not have syntaxtree")
+        assert_that(project.get_syntax_tree("utils"), is_(not_none()))
+        assert_that(project.get_syntax_tree("other"), is_(not_none()))
 
     def test_argparse_module(self):
         """argparse module has 2 interesting scenarios:
@@ -199,7 +204,7 @@ class TestStandardLibImportResolver(PyPrinceTestCase):
         We dont parse the code for these but we should still register the modules.
         """
         test_name = Path(self._testMethodName)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -211,14 +216,13 @@ class TestStandardLibImportResolver(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=False)
-        expectedNodes = ["main", "argparse", "unicodedata", "pwd"]
         actual = generators.describe_module_dependencies(project).to_dict()
-        self.assertContains(actual["nodes"], expectedNodes)
+        assert_that(actual["nodes"], has_items("main", "argparse", "unicodedata", "pwd"))
 
     def test_parsing_package_from_site_packages(self):
         test_name = self.current_test_name()
         test_path = Path(test_name)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_path / "main.py",
             textwrap.dedent(

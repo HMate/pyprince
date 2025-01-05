@@ -1,11 +1,12 @@
 import textwrap
 
-from tests.testutils import PyPrinceTestCase
+from hamcrest import assert_that, equal_to, is_
+from tests import testutils
 from pyprince.parser import Project, Module, ModuleIdentifier, Package, PackageType
 from pyprince import generators, serializer
 
 
-class TestDescribeModuleDependency(PyPrinceTestCase):
+class TestDescribeModuleDependency(testutils.PyPrinceTestCase):
     def test_single_dependency(self):
         project = Project()
         main_mod = Module(ModuleIdentifier("main", None), "main.py", None)
@@ -16,7 +17,7 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
         project.add_module(util_mod)
         actual = generators.describe_module_dependencies(project)
         expected = {"nodes": ["main", "util"], "edges": {"main": ["util"]}}
-        self.assertDictEqual(expected, actual.to_dict())
+        assert_that(actual.to_dict(), equal_to(expected))
 
     def test_describe_module_dependencies_with_packages(self):
         project = Project()
@@ -37,7 +38,7 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
             "packages": {"main": ["main"], "stdlib": ["os"]},
             "edges": {"main": ["os"]},
         }
-        self.assertDictEqual(expected, actual.to_dict())
+        assert_that(actual.to_dict(), equal_to(expected))
 
     def test_json_serialize(self):
         deps = generators.DependencyDescriptor()
@@ -60,7 +61,7 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
             }"""
         )
         actual = serializer.to_json(deps)
-        self.assertEqual(expected, actual)
+        assert_that(actual, equal_to(expected))
 
     def test_graphviz_serialize(self):
         deps = generators.DependencyDescriptor()
@@ -82,4 +83,4 @@ class TestDescribeModuleDependency(PyPrinceTestCase):
             }"""
         )
         actual = serializer.to_graphviz_dot(deps)
-        self.assertEqual(expected, actual)
+        assert_that(actual, equal_to(expected))

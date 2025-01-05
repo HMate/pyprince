@@ -1,7 +1,6 @@
 import io
 import json
 from pathlib import Path
-import sysconfig
 
 from hamcrest import (
     assert_that,

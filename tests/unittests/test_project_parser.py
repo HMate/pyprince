@@ -1,24 +1,21 @@
 from pathlib import Path
-import sys
-import sysconfig
 import textwrap
 
 from hamcrest import assert_that, contains_exactly, contains_inanyorder, has_items, is_, only_contains
 
 from pyprince.parser.project_cache import ProjectCache
 import tests.testutils as testutils
-from tests.testutils import PackageGenerator, PyPrinceTestCase, test_utils
 from pyprince.parser import parse_project, Project, Module
 
 
-class TestProjectParser(PyPrinceTestCase):
+class TestProjectParser(testutils.PyPrinceTestCase):
     def setUp(self):
         self.test_root = testutils.get_test_scenarios_dir()
         testutils.remove_imported_modules()
 
     def test_parsing_single_dependency(self):
         test_name = Path(self.current_test_name())
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -47,7 +44,7 @@ class TestProjectParser(PyPrinceTestCase):
 
     def test_parser_with_shallow_stdlib(self):
         test_name = Path(self.current_test_name())
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_name / "main.py",
             textwrap.dedent(
@@ -67,7 +64,7 @@ class TestProjectParser(PyPrinceTestCase):
 
     def test_parsing_package_from_stdlib(self):
         test_name = self.current_test_name()
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             Path(test_name) / "main.py",
             textwrap.dedent(
@@ -89,7 +86,7 @@ class TestProjectParser(PyPrinceTestCase):
     def test_parsing_package_from_local(self):
         test_name = self.current_test_name()
         test_path = Path(test_name)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_path / "main.py",
             textwrap.dedent(
@@ -119,7 +116,7 @@ class TestProjectParser(PyPrinceTestCase):
     def test_parsing_package_from_site_packages(self):
         test_name = self.current_test_name()
         test_path = Path(test_name)
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             test_path / "main.py",
             textwrap.dedent(
@@ -141,7 +138,7 @@ class TestProjectParser(PyPrinceTestCase):
 
     def test_create_cache_with_parsing(self):
         test_name = self.current_test_name()
-        gen = PackageGenerator()
+        gen = testutils.PackageGenerator()
         gen.add_file(
             Path(test_name) / "main.py",
             textwrap.dedent(
@@ -155,8 +152,8 @@ class TestProjectParser(PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         cache = ProjectCache()
-        os_module = test_utils.create_module("os", testutils.stdlib_path() / "os.py")
-        sys_module = test_utils.create_module("sys", testutils.stdlib_path() / "sys.py")
+        os_module = testutils.create_module("os", testutils.stdlib_path() / "os.py")
+        sys_module = testutils.create_module("sys", testutils.stdlib_path() / "sys.py")
         os_module.add_submodule(sys_module.id)
 
         cache.project.add_module(os_module)
