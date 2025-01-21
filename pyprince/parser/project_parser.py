@@ -74,6 +74,8 @@ class ProjectParser:
 
         while not remaining_modules.empty():
             next_module: ModuleIdentifier = remaining_modules.get()
+            if self.proj.has_module(next_module.name):
+                continue
             cached_module = self.project_cache.find_in_cache(next_module)
             if cached_module is None:
                 mod = self._parse_module(next_module)
