@@ -85,6 +85,8 @@ class ProjectParser:
                 self.import_handler.resolve_module_imports(mod)
             else:
                 mod = cached_module
+                self.proj.add_module(mod)
+                self.import_handler.resolve_module_imports(mod)
 
             package = self._resolve_module_package(mod)
             if self._does_shallow_parsing_apply(package):

@@ -156,8 +156,8 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         sys_module = testutils.create_module("sys", testutils.stdlib_path() / "sys.py")
         os_module.add_submodule(sys_module.id)
 
-        cache.project.add_module(os_module)
-        cache.project.add_module(sys_module)
+        cache._project.add_module(os_module)
+        cache._project.add_module(sys_module)
 
         project: Project = parse_project(self.test_root / test_name / "main.py", cache)
         assert_that(project.list_packages(), contains_inanyorder(test_name, "stdlib"))

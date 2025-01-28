@@ -9,16 +9,16 @@ from pyprince.parser.project import Module, ModuleIdentifier, Package, PackageTy
 
 class ProjectCache:
     def __init__(self) -> None:
-        self.project = Project()
+        self._project = Project()
 
     def find_in_cache(self, module_id: ModuleIdentifier) -> Optional[Module]:
-        if self.project.has_module(module_id.name):
-            return self.project.get_module(module_id.name)
+        if self._project.has_module(module_id.name):
+            return self._project.get_module(module_id.name)
         return None
 
-    def serialize(self, stream: io.IOBase):
+    def serialize(self, stream: io.IOBase, project: Project):
         logger.info("Saving cache")
-        std_package = self.project.get_package(constants.STDLIB_PACKAGE_NAME)
+        std_package = project.get_package(constants.STDLIB_PACKAGE_NAME)
         if std_package is None:
             logger.warning(f"{constants.STDLIB_PACKAGE_NAME} was empty, exit from saving.")
             return
@@ -26,7 +26,7 @@ class ProjectCache:
         save_content = {}
         std_save_content = {}
         for module_name in std_package.modules:
-            module = self.project.get_module(module_name)
+            module = project.get_module(module_name)
             if module is None:
                 raise PyPrinceException(f"Module '{module_name}' was in project packages, but not in modules")
             std_save_content[module.name] = {"name": module_name, "path": module.path}
@@ -36,15 +36,20 @@ class ProjectCache:
 
     def load_stream(self, stream: io.IOBase):
         logger.info("Loading cache")
-        saved_content = json.loads(stream.read())
+        content = stream.read()
+        if len(content) > 0:
+            saved_content = json.loads(content)
+        else:
+            return
+
         if not isinstance(saved_content, dict):
             logger.warning("Cache was not dict, stop loading")
             return
         for package_name, modules in saved_content.items():
             logger.info(f"Loading package '{package_name}' in cache")
             package = Package(package_name, None, PackageType.Unknown)
-            self.project.add_package(package)
+            self._project.add_package(package)
             for module_name, module_info in modules.items():
                 module = Module(ModuleIdentifier(module_name, None), module_info["path"], None)
-                self.project.add_module(module)
+                self._project.add_module(module)
                 package.add_module(module)
