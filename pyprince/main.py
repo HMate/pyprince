@@ -30,7 +30,6 @@ def main(
         typer.echo("Entrypoint check failed, exiting.")
         return
 
-    # TODO: Bug - load a saved cache will skip parsing all stdlib modules - why?
     project_cache = load_cache(cache_file)
     project = parser.parse_project(entrypoint, project_cache=project_cache)
     save_cache(cache_file, project)
@@ -51,6 +50,7 @@ def main(
             typer.echo(result)
     else:
         typer.echo(generators.generate_code(project))
+    logger.logger.success(f"pyprince finished")
 
 
 def load_cache(cache_file: Optional[pathlib.Path]) -> Optional[parser.ProjectCache]:

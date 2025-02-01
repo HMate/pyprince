@@ -78,15 +78,16 @@ class ProjectParser:
                 continue
             cached_module = self.project_cache.find_in_cache(next_module)
             if cached_module is None:
+                logger.info(f"Parsing module {next_module.name} (remaining: {remaining_modules.qsize()})")
                 mod = self._parse_module(next_module)
                 if mod is None:
                     continue
-                self.proj.add_module(mod)
                 self.import_handler.resolve_module_imports(mod)
             else:
+                logger.info(f"Found module in cache {cached_module.name} (remaining: {remaining_modules.qsize()})")
                 mod = cached_module
-                self.proj.add_module(mod)
-                self.import_handler.resolve_module_imports(mod)
+
+            self.proj.add_module(mod)
 
             package = self._resolve_module_package(mod)
             if self._does_shallow_parsing_apply(package):
@@ -108,7 +109,6 @@ class ProjectParser:
         return mod
 
     def _parse_module_unchecked(self, module_id: ModuleIdentifier) -> Module:
-        logger.info(f"Parsing module {module_id.name}")
         if module_id.name == "__main__":
             # __main__ module is technically the currently loaded top module,
             # but we dont have any reasons right now to deal with that.

@@ -7,8 +7,10 @@ from pyprince import console_entry_main
 # - Add tests for the npm package for every python version.
 
 # TODO: 0.0.5:
+# - OK - Parse project divided into packages.
+# - OK - Save in cache
+#   - Also serialize package path - needs structure for packages
 # - Convert entry to flask app
-# - Parse project divided by modules.
 # - api endpoint to parse selected module by name
 # - api endpoint to parse from entrypoint script and shallow parse other modules
 # - api endpoint to parse all recusively.

@@ -24,11 +24,20 @@ def init():
         return False
 
     logpath = get_log_folder() / "pyprince.log"
+    info_logpath = get_log_folder() / "pyprince.info.log"
 
     logger.remove()
     logger.add(
         logpath,
         level="DEBUG",
+        diagnose=True,
+        retention=3,
+        enqueue=True,
+        rotation=should_rotate_log,
+    )
+    logger.add(
+        info_logpath,
+        level="INFO",
         diagnose=True,
         retention=3,
         enqueue=True,

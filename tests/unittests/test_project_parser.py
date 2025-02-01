@@ -42,7 +42,7 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         assert_that(project.get_modules(), contains_inanyorder("main", "util"))
         assert_that(project.get_module("main").submodules[0].name, is_("util"))
 
-    def test_parser_with_shallow_stdlib(self):
+    def test_parsing_stdlib_module_with_shallow_stdlib(self):
         test_name = Path(self.current_test_name())
         gen = testutils.PackageGenerator()
         gen.add_file(
@@ -62,7 +62,28 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         assert_that(project.get_modules(), contains_inanyorder("main", "os"))
         assert_that(project.get_module("main").submodules[0].name, is_("os"))
 
-    def test_parsing_package_from_stdlib(self):
+    def test_parsing_stdlib_module_has_submodules(self):
+        test_name = Path(self.current_test_name())
+        gen = testutils.PackageGenerator()
+        gen.add_file(
+            test_name / "main.py",
+            textwrap.dedent(
+                """
+                import os
+
+                def main():
+                    print((["Mom", "Dad"], ["Grandpa", "Cousin"]))
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
+        assert_that(project.get_modules(), contains_inanyorder("main", "os"))
+        submodules = [sub.name for sub in project.get_module("os").submodules]
+        assert_that(submodules, has_items("abc", "sys", "stat"))  # in cpython 3.9.13
+
+    def test_parsing_stdlib_module_has_correct_package(self):
         test_name = self.current_test_name()
         gen = testutils.PackageGenerator()
         gen.add_file(
