@@ -7,7 +7,7 @@ from tests import testutils
 from pyprince.parser.project import Module, Project
 from pyprince.parser import parse_project
 from pyprince import generators
-from pyprince.logger import logger
+from pyprince.utils import logger
 
 from tests.testutils.matchers import all_unique
 

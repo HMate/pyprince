@@ -9,7 +9,7 @@ import importlib, importlib.util
 import libcst
 
 from pyprince.parser.project import Project
-from pyprince.logger import logger
+from pyprince.utils import logger
 
 
 def parse_project_by_imports(entry_file: Path) -> Project:

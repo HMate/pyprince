@@ -11,7 +11,7 @@ from pyprince.parser.import_handler import ImportHandler
 from pyprince.parser.module_finder import ModuleFinder
 from pyprince.parser.package_finder import PackageFinder
 from pyprince.parser.project import ModuleIdentifier, Package, PackageType, Project, Module
-from pyprince.logger import logger
+from pyprince.utils import logger
 from pyprince.parser.project_cache import ProjectCache
 
 

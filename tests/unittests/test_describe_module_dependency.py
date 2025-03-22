@@ -3,7 +3,9 @@ import textwrap
 from hamcrest import assert_that, equal_to, is_
 from tests import testutils
 from pyprince.parser import Project, Module, ModuleIdentifier, Package, PackageType
-from pyprince import generators, serializer
+from pyprince import generators
+
+from pyprince.utils import serializer
 
 
 class TestDescribeModuleDependency(testutils.PyPrinceTestCase):

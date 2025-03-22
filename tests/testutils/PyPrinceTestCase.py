@@ -2,7 +2,7 @@ import collections.abc
 import unittest
 from typing import Iterable, List, Optional, TypeVar
 
-from pyprince.logger import logger, get_log_folder
+from pyprince.utils import logger, get_log_folder
 
 g_log_should_rotate = True
 

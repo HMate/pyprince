@@ -1,9 +1,9 @@
 import io
 import json
 from typing import Optional
-from pyprince.error import PyPrinceException
+from pyprince.utils.error import PyPrinceException
 from pyprince.parser import constants
-from pyprince.logger import logger
+from pyprince.utils import logger
 from pyprince.parser.project import Module, ModuleIdentifier, Package, PackageType, Project
 
 

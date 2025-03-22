@@ -8,7 +8,7 @@ import libcst.matchers as cstm
 from pyprince.parser import constants
 from pyprince.parser.module_finder import ModuleFinder
 from pyprince.parser.project import Module
-from pyprince.logger import logger
+from pyprince.utils import logger
 
 
 class ImportHandler:

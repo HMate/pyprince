@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 from typing import Dict, Optional, Sequence, Tuple
 
-from pyprince.logger import logger
+from pyprince.utils import logger
 from pyprince.parser.project import ModuleIdentifier
 from pyprince.parser import constants
 
