@@ -2,7 +2,7 @@ import inspect
 import traceback
 import sys
 from pathlib import Path
-from types import ModuleType
+from types import BuiltinFunctionType, FunctionType, ModuleType
 from typing import List, Optional, Tuple
 import importlib, importlib.util
 
@@ -90,9 +90,9 @@ def _load_missing_modules(entry_file: Path, mod: ModuleType, visited=None, debug
     if mod in visited:
         return
     visited.append(mod)
-    builtins: List[Tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isbuiltin)
-    functions: List[Tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isfunction)
-    classes: List[Tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.isclass)
+    builtins: List[Tuple[str, BuiltinFunctionType]] = inspect.getmembers(mod, inspect.isbuiltin)
+    functions: List[Tuple[str, FunctionType]] = inspect.getmembers(mod, inspect.isfunction)
+    classes: List[Tuple[str, type]] = inspect.getmembers(mod, inspect.isclass)
 
     names_seen = []
     names_seen.append(get_module_name(mod))
