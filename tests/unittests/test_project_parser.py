@@ -3,8 +3,9 @@ import textwrap
 
 from hamcrest import assert_that, contains_exactly, contains_inanyorder, has_items, is_, only_contains
 
-from pyprince.parser.project_cache import ProjectCache
 import tests.testutils as testutils
+from pyprince.parser.project import PackageType
+from pyprince.parser.project_cache import ProjectCache
 from pyprince.parser import parse_project, Project, Module
 
 
@@ -14,21 +15,19 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         testutils.remove_imported_modules()
 
     def test_parsing_single_dependency(self):
-        test_name = Path(self.current_test_name())
+        test_name = self.current_test_name()
+        test_path = Path(test_name)
         gen = testutils.PackageGenerator()
         gen.add_file(
-            test_name / "main.py",
+            test_path / "main.py",
             textwrap.dedent(
                 """
                 from util import some_functionality
-
-                def main():
-                    some_functionality(["Mom", "Dad"], ["Grandpa", "Cousin"])
                 """
             ).lstrip(),
         )
         gen.add_file(
-            test_name / "util.py",
+            test_path / "util.py",
             textwrap.dedent(
                 """
                 def some_functionality(parents, relatives):
@@ -41,6 +40,7 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
         assert_that(project.get_modules(), contains_inanyorder("main", "util"))
         assert_that(project.get_module("main").submodules[0].name, is_("util"))
+        assert_that(project.get_package(test_name).package_type, PackageType.Local)
 
     def test_parsing_stdlib_module_with_shallow_stdlib(self):
         test_name = Path(self.current_test_name())
@@ -50,9 +50,6 @@ class TestProjectParser(testutils.PyPrinceTestCase):
             textwrap.dedent(
                 """
                 import os
-
-                def main():
-                    print((["Mom", "Dad"], ["Grandpa", "Cousin"]))
                 """
             ).lstrip(),
         )
@@ -70,9 +67,6 @@ class TestProjectParser(testutils.PyPrinceTestCase):
             textwrap.dedent(
                 """
                 import os
-
-                def main():
-                    print((["Mom", "Dad"], ["Grandpa", "Cousin"]))
                 """
             ).lstrip(),
         )
@@ -133,6 +127,7 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
         assert_that(project.list_packages(), contains_exactly(test_name))
         assert_that(project.get_package(test_name).modules, contains_inanyorder("main", "util"))
+        assert_that(project.get_package(test_name).package_type, PackageType.Local)
 
     def test_parsing_package_from_site_packages(self):
         test_name = self.current_test_name()
@@ -156,8 +151,9 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         )
         assert_that(project.list_packages(), has_items(test_name, "libcst"))
         assert_that(project.get_package("libcst").modules, has_items("libcst"))
+        assert_that(project.get_package("libcst").package_type, PackageType.Site)
 
-    def test_create_cache_with_parsing(self):
+    def test_parse_stdlib_package_from_cache(self):
         test_name = self.current_test_name()
         gen = testutils.PackageGenerator()
         gen.add_file(
@@ -183,3 +179,4 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         project: Project = parse_project(self.test_root / test_name / "main.py", cache)
         assert_that(project.list_packages(), contains_inanyorder(test_name, "stdlib"))
         assert_that(project.get_package("stdlib").modules, contains_inanyorder("os", "sys"))
+        assert_that(project.get_package("stdlib").package_type, PackageType.StandardLib)

@@ -25,19 +25,27 @@ class TestDescribeModuleDependency(testutils.PyPrinceTestCase):
         project = Project()
         main_mod = Module(ModuleIdentifier("main", None), "main.py", None)
         os_mod = Module(ModuleIdentifier("os", None), "os.py", None)
+        site_mod = Module(ModuleIdentifier("libcst", None), "libcst.py", None)
         main_mod.add_submodule(os_mod.id)
         project.add_root_module(main_mod.name)
         project.add_module(main_mod)
         project.add_module(os_mod)
+        project.add_module(site_mod)
         project.add_package(Package("main", None, PackageType.Local))
         project.add_package(Package("stdlib", None, PackageType.StandardLib))
+        project.add_package(Package("libcst", None, PackageType.Site))
         project.get_package("main").add_module(main_mod.id)
         project.get_package("stdlib").add_module(os_mod.id)
+        project.get_package("libcst").add_module(site_mod.id)
         actual = generators.describe_module_dependencies(project)
 
         expected = {
-            "nodes": ["main", "os"],
-            "packages": {"main": ["main"], "stdlib": ["os"]},
+            "nodes": ["main", "os", "libcst"],
+            "packages": {
+                "main": {"type": "Local", "modules": {"main"}},
+                "stdlib": {"type": "StandardLib", "modules": {"os"}},
+                "libcst": {"type": "Site", "modules": {"libcst"}},
+            },
             "edges": {"main": ["os"]},
         }
         assert_that(actual.to_dict(), equal_to(expected))
@@ -47,6 +55,7 @@ class TestDescribeModuleDependency(testutils.PyPrinceTestCase):
         deps.add_node("main")
         deps.add_node("util")
         deps.add_edge("main", "util")
+        deps.add_package(Package("stdlib", None, PackageType.StandardLib))
 
         expected = textwrap.dedent(
             """\
@@ -59,6 +68,12 @@ class TestDescribeModuleDependency(testutils.PyPrinceTestCase):
                 "main": [
                   "util"
                 ]
+              },
+              "packages": {
+                "stdlib": {
+                  "type": "StandardLib",
+                  "modules": []
+                }
               }
             }"""
         )

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from hamcrest import assert_that, contains_inanyorder, has_item, has_items, is_, none, not_, not_none
 from tests import testutils
-from pyprince.parser.project import Module, Project
+from pyprince.parser.project import Module, PackageType, Project
 from pyprince.parser import parse_project
 from pyprince import generators
 from pyprince.utils import logger
@@ -239,3 +239,4 @@ class TestStandardLibImportResolver(testutils.PyPrinceTestCase):
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
         assert_that(project.list_packages(), has_items(test_name, "libcst", "stdlib"))
         assert_that(project.get_package("libcst").modules, has_items("libcst"))
+        assert_that(project.get_package("libcst").package_type, PackageType.Site)

@@ -1,17 +1,25 @@
+from dataclasses import dataclass, field
+import dataclasses
 from types import ModuleType
 import inspect
 from collections import defaultdict
 from typing import Iterable, List, Set
 
 from pyprince.parser import get_module_name
-from pyprince.parser import Project, Module
+from pyprince.parser import Project, Module, Package, PackageType
+
+
+@dataclass
+class PackageDescriptor:
+    type: str = PackageType.Unknown.name
+    modules: Set[str] = field(default_factory=set)
 
 
 class DependencyDescriptor:
     def __init__(self) -> None:
         self.nodes: List[str] = []
         self.edges: dict[str, List[str]] = defaultdict(list)
-        self.packages: dict[str, Set[str]] = defaultdict(set)
+        self.packages: dict[str, PackageDescriptor] = defaultdict(PackageDescriptor)
 
     def add_node(self, node: str):
         self.nodes.append(node)
@@ -19,13 +27,13 @@ class DependencyDescriptor:
     def add_edge(self, root: str, sub: str):
         self.edges[root].append(sub)
 
-    def add_package(self, package: str, modules: Iterable[str]):
-        self.packages[package].update(modules)
+    def add_package(self, package: Package):
+        self.packages[package.name] = PackageDescriptor(package.package_type.name, package.modules)
 
     def to_dict(self):
         result = {"nodes": self.nodes, "edges": dict(self.edges)}
         if len(self.packages) > 0:
-            result["packages"] = {k: list(v) for k, v in self.packages.items()}
+            result["packages"] = {k: dataclasses.asdict(v) for k, v in self.packages.items()}
         return result
 
 
@@ -42,7 +50,6 @@ def describe_module_dependencies(proj: Project) -> DependencyDescriptor:
     The nodes can be package names and module names (a package is roughly a folder full of modules).
 
     The node names are unique.
-    TODO: Add option to group modules into packages
     """
     return _describe_deps(proj)
     # return _describe_deps_from_imports(proj)
@@ -63,7 +70,7 @@ def _describe_deps(proj: Project) -> DependencyDescriptor:
         package = proj.get_package(package_name)
         if package is None:
             continue
-        result.add_package(package_name, package.modules)
+        result.add_package(package)
 
     return result
 
