@@ -23,6 +23,7 @@ def main(
     output_file: Optional[pathlib.Path] = typer.Option(None, "-o"),
     cache_file: Optional[pathlib.Path] = typer.Option(None, "--cache"),
     output_format: OutputFormat = typer.Option(OutputFormat.json, "-f"),
+    shallow_stdlib: bool = typer.Option(False, "--shallow-std"),
 ):
     logging.init()
     logger.info(f"Starting pyprince at {pathlib.Path().absolute()}")
@@ -32,7 +33,7 @@ def main(
         return
 
     project_cache = load_cache(cache_file)
-    project = parser.parse_project(entrypoint, project_cache=project_cache)
+    project = parser.parse_project(entrypoint, project_cache=project_cache, shallow_stdlib=shallow_stdlib)
     save_cache(cache_file, project)
 
     if describe_modules:
