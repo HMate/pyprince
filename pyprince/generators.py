@@ -1,11 +1,8 @@
 from dataclasses import dataclass, field
 import dataclasses
-from types import ModuleType
-import inspect
 from collections import defaultdict
-from typing import Iterable, List, Set
+from typing import List, Set
 
-from pyprince.parser import get_module_name
 from pyprince.parser import Project, Module, Package, PackageType
 
 
@@ -52,7 +49,6 @@ def describe_module_dependencies(proj: Project) -> DependencyDescriptor:
     The node names are unique.
     """
     return _describe_deps(proj)
-    # return _describe_deps_from_imports(proj)
 
 
 def _describe_deps(proj: Project) -> DependencyDescriptor:
@@ -71,34 +67,5 @@ def _describe_deps(proj: Project) -> DependencyDescriptor:
         if package is None:
             continue
         result.add_package(package)
-
-    return result
-
-
-def _describe_deps_from_imports(proj: Project) -> DependencyDescriptor:
-    """
-    Looks through modules that are loaded in and add them to descriptor.
-    """
-    result = DependencyDescriptor()
-    modules = proj.get_loaded_modules()
-    if not modules:
-        return result
-
-    def _recursively_enumerate_submodules(mod: ModuleType, visited: set[ModuleType]):
-        if mod not in visited:
-            node_id = len(visited)
-            visited.add(mod)
-            result.add_node(get_module_name(mod))
-
-        subs: List[tuple[str, ModuleType]] = inspect.getmembers(mod, inspect.ismodule)
-        for name, sub in subs:
-            if sub == mod:
-                continue
-            if sub not in visited:
-                _recursively_enumerate_submodules(sub, visited)
-            result.add_edge(get_module_name(mod), get_module_name(sub))
-
-    visited = set()
-    _recursively_enumerate_submodules(modules, visited)
 
     return result
