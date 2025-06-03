@@ -78,19 +78,27 @@ class ProjectParser:
                 continue
             cached_module = self.project_cache.find_in_cache(next_module)
             if cached_module is None:
-                logger.info(f"Parsing module {next_module.name} (remaining: {remaining_modules.qsize()})")
+                logger.info(f"Parsing module '{next_module.name}' (remaining: {remaining_modules.qsize()})")
                 mod = self._parse_module(next_module)
                 if mod is None:
                     continue
                 self.import_handler.resolve_module_imports(mod)
             else:
-                logger.info(f"Found module in cache {cached_module.name} (remaining: {remaining_modules.qsize()})")
+                logger.info(f"Found module in cache '{cached_module.name}' (remaining: {remaining_modules.qsize()})")
                 mod = cached_module
 
             self.proj.add_module(mod)
 
             package = self._resolve_module_package(mod)
             if self._does_shallow_parsing_apply(package):
+                for sub in mod.submodules:
+                    if not self.proj.has_module(sub.name):
+                        logger.info(f"Parsing shallow submodule '{sub.name}'")
+                        sub_mod = self._parse_module(sub)
+                        if sub_mod is None:
+                            continue
+                        self.proj.add_module(sub_mod)
+                        self._resolve_module_package(sub_mod)
                 continue
 
             for sub in mod.submodules:

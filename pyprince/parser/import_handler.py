@@ -16,6 +16,10 @@ class ImportHandler:
         self.finder = module_finder
 
     def resolve_module_imports(self, mod: Module):
+        """
+        Goes through the imports of this module, and adds them as a submodule.
+        Resolves relative and 'from' imports to absolute package ids.
+        """
         if mod.syntax_tree is None:
             return
 
@@ -43,6 +47,7 @@ class ImportHandler:
             ):
                 mod.add_submodule(package_id)
                 continue
+
             for target in imp.targets:
                 module_candidate = f"{package_id.name}.{target}"
                 sub_id = self.finder.try_find_top_level_module(module_candidate)

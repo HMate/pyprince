@@ -1,6 +1,7 @@
 from enum import Enum
 import pathlib
 from typing import Optional
+import sys
 
 import typer
 
@@ -26,7 +27,8 @@ def main(
     shallow_stdlib: bool = typer.Option(False, "--shallow-std"),
 ):
     logging.init()
-    logger.info(f"Starting pyprince at {pathlib.Path().absolute()}")
+    logger.info(f"****** Starting pyprince at {pathlib.Path().absolute()} ******")
+    logger.info(f"Program called with args: {sys.argv}")
 
     if not check_entrypoint(entrypoint):
         typer.echo("Entrypoint check failed, exiting.")

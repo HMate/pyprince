@@ -26,6 +26,7 @@ class ProjectCache:
         logger.info("Saving cache")
         std_package = project.get_package(constants.STDLIB_PACKAGE_NAME)
         if std_package is None:
+            # TODO: We should save even if there is no stdlib package
             logger.warning(f"{constants.STDLIB_PACKAGE_NAME} was empty, exit from saving.")
             return
 

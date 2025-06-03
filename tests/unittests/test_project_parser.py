@@ -7,6 +7,7 @@ import tests.testutils as testutils
 from pyprince.parser.project import PackageType
 from pyprince.parser.project_cache import ProjectCache
 from pyprince.parser import parse_project, Project, Module
+from pyprince.parser import constants
 
 
 class TestProjectParser(testutils.PyPrinceTestCase):
@@ -56,7 +57,7 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
-        assert_that(project.get_modules(), contains_inanyorder("main", "os"))
+        assert_that(project.get_modules(), has_items("main", "os"))
         assert_that(project.get_module("main").submodules[0].name, is_("os"))
 
     def test_parsing_stdlib_module_has_submodules(self):
@@ -73,7 +74,6 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
-        assert_that(project.get_modules(), contains_inanyorder("main", "os"))
         submodules = [sub.name for sub in project.get_module("os").submodules]
         assert_that(submodules, has_items("abc", "sys", "stat"))  # in cpython 3.9.13
 
@@ -94,9 +94,9 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         gen.generate_files(self.test_root)
 
         project: Project = parse_project(self.test_root / test_name / "main.py", shallow_stdlib=True)
-        assert_that(project.list_packages(), contains_inanyorder(test_name, "stdlib"))
+        assert_that(project.list_packages(), contains_inanyorder(test_name, constants.STDLIB_PACKAGE_NAME))
         assert_that(project.get_package(test_name).modules, contains_exactly("main"))
-        assert_that(project.get_package("stdlib").modules, contains_exactly("os"))
+        assert_that(project.get_package(constants.STDLIB_PACKAGE_NAME).modules, has_items("os"))
 
     def test_parsing_package_from_local(self):
         test_name = self.current_test_name()
@@ -177,6 +177,35 @@ class TestProjectParser(testutils.PyPrinceTestCase):
         cache._project.add_module(sys_module)
 
         project: Project = parse_project(self.test_root / test_name / "main.py", cache)
-        assert_that(project.list_packages(), contains_inanyorder(test_name, "stdlib"))
-        assert_that(project.get_package("stdlib").modules, contains_inanyorder("os", "sys"))
-        assert_that(project.get_package("stdlib").package_type, PackageType.StandardLib)
+        assert_that(project.list_packages(), contains_inanyorder(test_name, constants.STDLIB_PACKAGE_NAME))
+        assert_that(project.get_modules(), contains_inanyorder("main", "os", "sys"))
+        assert_that(project.get_package(constants.STDLIB_PACKAGE_NAME).modules, contains_inanyorder("os", "sys"))
+        assert_that(project.get_package(constants.STDLIB_PACKAGE_NAME).package_type, PackageType.StandardLib)
+
+    def test_should_contain_submodules_from_shallow_cached_packages(self):
+        test_name = self.current_test_name()
+        gen = testutils.PackageGenerator()
+        gen.add_file(
+            Path(test_name) / "main.py",
+            textwrap.dedent(
+                """
+                import os
+
+                print((["Mom", "Dad"], ["Grandpa", "Cousin"]))
+                """
+            ).lstrip(),
+        )
+        gen.generate_files(self.test_root)
+
+        cache = ProjectCache()
+        os_module = testutils.create_module("os", testutils.stdlib_path() / "os.py")
+        sys_module = testutils.create_module("sys", testutils.stdlib_path() / "sys.py")
+        os_module.add_submodule(sys_module.id)
+
+        cache._project.add_module(os_module)
+
+        project: Project = parse_project(self.test_root / test_name / "main.py", cache, shallow_stdlib=True)
+        assert_that(project.list_packages(), contains_inanyorder(test_name, constants.STDLIB_PACKAGE_NAME))
+        assert_that(project.get_modules(), contains_inanyorder("main", "os", "sys"))
+        assert_that(project.get_package(constants.STDLIB_PACKAGE_NAME).modules, contains_inanyorder("os", "sys"))
+        assert_that(project.get_package(constants.STDLIB_PACKAGE_NAME).package_type, PackageType.StandardLib)
