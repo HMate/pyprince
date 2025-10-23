@@ -14,11 +14,15 @@ class OutputFormat(str, Enum):
     dot = "dot"
 
 
+app = typer.Typer()
+
+
 def console_entry_main():
-    typer.run(main)
+    app()
 
 
-def main(
+@app.command()
+def parse(
     entrypoint: pathlib.Path,
     describe_modules: bool = typer.Option(False, "--dm"),
     output_file: Optional[pathlib.Path] = typer.Option(None, "-o"),
@@ -55,6 +59,11 @@ def main(
     else:
         typer.echo(generators.generate_code(project))
     logger.success(f"pyprince finished")
+
+
+@app.command()
+def version():
+    typer.echo(f"pyprince version: 0.0.5")
 
 
 def load_cache(cache_file: Optional[pathlib.Path]) -> Optional[parser.ProjectCache]:

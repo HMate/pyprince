@@ -1,3 +1,8 @@
+"""
+Build a pyz package for pyprince into the /build folder using shiv and pip.
+This script should be started from the venv that contains the dev deps of pyprince.
+"""
+
 import subprocess
 import venv
 import os

@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require("node:path"); 
+const fs = require("node:fs"); 
 const { execFileSync } = require("node:child_process");
 
 class PyPrince {
@@ -15,6 +16,15 @@ class PyPrince {
     callPrince(...args) {
         return execFileSync(this.pythonExecutablePath, [this.pyprincePath, ...args]).toString();
         // TODO: Check result field 
+    }
+
+    async getPrinceInfo() {
+        try {
+            const stats = await fs.promises.stat(this.pyprincePath);
+            return stats;
+        } catch (err) {
+            throw err;
+        }
     }
 };
 

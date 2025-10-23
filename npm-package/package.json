@@ -4,7 +4,7 @@
     "description": "Javascript wrapper for pyprince, a full project parser for python",
     "main": "index.js",
     "scripts": {
-        "build": "cd .. && python build_pyz.py && python build_npm_package.py",
+        "build": "cd .. && poetry run python build_pyz.py && poetry run python build_npm_package.py",
         "create-link": "npm link"
     },
     "repository": {
