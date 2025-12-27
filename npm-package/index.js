@@ -21,6 +21,7 @@ class PyPrince {
     async getPrinceInfo() {
         try {
             const stats = await fs.promises.stat(this.pyprincePath);
+            stats.filePath = this.pyprincePath;
             return stats;
         } catch (err) {
             throw err;
